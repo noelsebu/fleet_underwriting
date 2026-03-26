@@ -10,6 +10,13 @@
         body { background: #f0f4f8; }
         .header { background: linear-gradient(135deg, #0d1b2a 0%, #1b3a5c 100%); color: white; padding: 40px 20px 30px; text-align: center; }
         .form-card { max-width: 640px; margin: -20px auto 40px; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,.10); border: none; }
+        .lookup-mode { border: 2px solid #dee2e6; border-radius: 12px; padding: 14px 18px; cursor: pointer;
+                       transition: border-color .2s, background .2s; }
+        .lookup-mode:has(input:checked) { border-color: #0d6efd; background: #f0f5ff; }
+        .policy-option { border: 1.5px solid #dee2e6; border-radius: 10px; padding: 12px 16px; cursor: pointer;
+                          transition: border-color .2s, background .2s; margin-bottom: 8px; }
+        .policy-option:has(input:checked) { border-color: #0d6efd; background: #f0f5ff; }
+        .section-divider { border-top: 2px dashed #dee2e6; margin: 20px 0; }
     </style>
 </head>
 <body>
@@ -19,19 +26,15 @@
         <i class="bi bi-shield-lock me-1"></i> Admin Login
     </a>
     <div class="d-flex gap-2">
-        <a th:href="@{/}" class="btn btn-outline-light btn-sm">
-            <i class="bi bi-house me-1"></i> Home
-        </a>
-        <a th:href="@{/policy/lookup}" class="btn btn-outline-light btn-sm">
-            <i class="bi bi-search me-1"></i> Check My Policy
-        </a>
+        <a th:href="@{/}" class="btn btn-outline-light btn-sm"><i class="bi bi-house me-1"></i> Home</a>
+        <a th:href="@{/policy/lookup}" class="btn btn-outline-light btn-sm"><i class="bi bi-search me-1"></i> Check My Policy</a>
     </div>
 </nav>
 
 <div class="header">
     <i class="bi bi-file-earmark-plus" style="font-size:2.4rem; color:#4dabf7;"></i>
     <h2 class="fw-bold mt-2 mb-1">File a Claim</h2>
-    <p class="mb-0" style="opacity:.8;">Enter your Customer ID or Policy Number to get started.</p>
+    <p class="mb-0" style="opacity:.8;">Identify your policy to get started.</p>
 </div>
 
 <div class="container" style="padding-top:40px;">
@@ -43,30 +46,104 @@
                 <span th:text="${error}"></span>
             </div>
 
-            <form th:action="@{/claim/submit}" method="post">
+            <form th:action="@{/claim/submit}" method="post" id="claimForm">
 
-                <div class="mb-3">
-                    <label class="form-label fw-semibold">Customer ID or Policy Number</label>
-                    <input type="text" name="reference" class="form-control" placeholder="e.g. CUST-2025-0001 or Pol-2025-1" required>
-                    <div class="form-text">Find this on your policy confirmation page.</div>
+                <!-- ── Step 1: Identify policy ─────────────────────────── -->
+                <p class="fw-semibold text-muted small text-uppercase mb-3" style="letter-spacing:.5px;">
+                    Step 1 — Identify Your Policy
+                </p>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-6">
+                        <label class="lookup-mode w-100">
+                            <input type="radio" name="lookupMode" value="policyNumber" id="radioPolicy" class="d-none" checked>
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="bi bi-file-text text-primary" style="font-size:1.3rem;"></i>
+                                <div>
+                                    <div class="fw-semibold" style="font-size:.9rem;">Policy Number</div>
+                                    <div class="text-muted" style="font-size:.78rem;">I have my policy number</div>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                    <div class="col-6">
+                        <label class="lookup-mode w-100">
+                            <input type="radio" name="lookupMode" value="customerId" id="radioCustomer" class="d-none">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="bi bi-person-badge text-success" style="font-size:1.3rem;"></i>
+                                <div>
+                                    <div class="fw-semibold" style="font-size:.9rem;">Customer ID</div>
+                                    <div class="text-muted" style="font-size:.78rem;">Look up by customer ID</div>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
                 </div>
 
+                <!-- Policy Number input -->
+                <div id="policyNumberSection">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Policy Number</label>
+                        <input type="text" id="policyNumberInput" class="form-control"
+                               placeholder="e.g. Pol-2025-1"
+                               oninput="syncReference(this.value)">
+                        <div class="form-text">Enter the policy number from your confirmation email.</div>
+                    </div>
+                </div>
+
+                <!-- Customer ID lookup -->
+                <div id="customerIdSection" style="display:none;">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Customer ID</label>
+                        <div class="input-group">
+                            <input type="text" id="customerIdInput" class="form-control"
+                                   placeholder="e.g. CUST-2025-0001" style="text-transform:uppercase;">
+                            <button class="btn btn-primary" type="button" id="lookupBtn" onclick="lookupPolicies()">
+                                <i class="bi bi-search me-1"></i> Find Policies
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Policy selection (appears after lookup) -->
+                    <div id="policyResults" style="display:none;" class="mb-3">
+                        <label class="form-label fw-semibold">Select Policy</label>
+                        <div id="policyList"></div>
+                        <div id="noPoliciesMsg" style="display:none;" class="alert alert-warning py-2 small">
+                            <i class="bi bi-exclamation-circle me-1"></i>
+                            No active policies found for this Customer ID.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Hidden reference field submitted with the form -->
+                <input type="hidden" name="reference" id="referenceField" required>
+
+                <div class="section-divider"></div>
+
+                <!-- ── Step 2: Incident details ───────────────────────── -->
+                <p class="fw-semibold text-muted small text-uppercase mb-3" style="letter-spacing:.5px;">
+                    Step 2 — Incident Details
+                </p>
+
                 <div class="mb-3">
-                    <label class="form-label fw-semibold">Incident Date</label>
-                    <input type="date" name="incidentDate" class="form-control" required>
+                    <label class="form-label fw-semibold">Date of Incident</label>
+                    <input type="date" name="incidentDate" id="incidentDate" class="form-control"
+                           th:max="${#temporals.format(#temporals.createNow(), 'yyyy-MM-dd')}" required>
+                    <div class="form-text" id="dateHint">Date must be on or after your policy issue date.</div>
                 </div>
 
                 <div class="mb-3">
                     <label class="form-label fw-semibold">Incident Description</label>
                     <textarea name="incidentDescription" class="form-control" rows="4"
-                              placeholder="Describe what happened, where, and what vehicles were involved..." required></textarea>
+                              placeholder="Describe what happened, where, and which vehicles were involved..." required></textarea>
                 </div>
 
                 <div class="mb-3">
                     <label class="form-label fw-semibold">Claim Amount (USD)</label>
                     <div class="input-group">
                         <span class="input-group-text">$</span>
-                        <input type="number" name="claimAmount" class="form-control" step="0.01" min="1" placeholder="0.00" required>
+                        <input type="number" name="claimAmount" class="form-control"
+                               step="0.01" min="1" placeholder="0.00" required>
                     </div>
                 </div>
 
@@ -80,15 +157,128 @@
                 </div>
 
                 <div class="d-grid">
-                    <button type="submit" class="btn btn-warning fw-semibold" style="padding:12px;">
+                    <button type="submit" class="btn btn-warning fw-semibold" style="padding:12px;" id="submitBtn" disabled>
                         <i class="bi bi-send me-2"></i>Submit Claim
                     </button>
                 </div>
+                <p class="text-muted text-center small mt-2" id="submitHint">
+                    Please select a policy above to enable submission.
+                </p>
             </form>
         </div>
     </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    const radioPolicy   = document.getElementById('radioPolicy');
+    const radioCustomer = document.getElementById('radioCustomer');
+    const policySection = document.getElementById('policyNumberSection');
+    const customerSection = document.getElementById('customerIdSection');
+    const referenceField  = document.getElementById('referenceField');
+    const submitBtn       = document.getElementById('submitBtn');
+    const submitHint      = document.getElementById('submitHint');
+    const incidentDate    = document.getElementById('incidentDate');
+    const dateHint        = document.getElementById('dateHint');
+
+    function switchMode() {
+        const isPolicyMode = radioPolicy.checked;
+        policySection.style.display  = isPolicyMode ? '' : 'none';
+        customerSection.style.display = isPolicyMode ? 'none' : '';
+        // clear reference when switching
+        referenceField.value = '';
+        enableSubmit(false);
+        if (isPolicyMode) {
+            const val = document.getElementById('policyNumberInput').value.trim();
+            if (val) syncReference(val);
+        }
+    }
+
+    function syncReference(val) {
+        referenceField.value = val.trim();
+        enableSubmit(!!val.trim());
+    }
+
+    function enableSubmit(yes) {
+        submitBtn.disabled = !yes;
+        submitHint.style.display = yes ? 'none' : '';
+    }
+
+    function setMinDate(isoDate) {
+        incidentDate.min = isoDate;
+        dateHint.textContent = 'Date must be on or after your policy issue date (' + isoDate + ').';
+    }
+
+    async function lookupPolicies() {
+        const custId = document.getElementById('customerIdInput').value.trim().toUpperCase();
+        if (!custId) return;
+
+        const btn = document.getElementById('lookupBtn');
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Searching...';
+        btn.disabled = true;
+
+        try {
+            const resp = await fetch('/claim/policies?customerId=' + encodeURIComponent(custId));
+            const policies = await resp.json();
+
+            const resultsDiv  = document.getElementById('policyResults');
+            const listDiv     = document.getElementById('policyList');
+            const noMsg       = document.getElementById('noPoliciesMsg');
+            resultsDiv.style.display = '';
+            listDiv.innerHTML = '';
+            referenceField.value = '';
+            enableSubmit(false);
+
+            if (policies.length === 0) {
+                noMsg.style.display = '';
+                return;
+            }
+            noMsg.style.display = 'none';
+
+            policies.forEach((p, i) => {
+                const id = 'pol_' + i;
+                const div = document.createElement('label');
+                div.className = 'policy-option d-flex align-items-center gap-3 w-100';
+                div.innerHTML = `
+                    <input type="radio" name="_policyRadio" value="${p.policyNumber}" id="${id}"
+                           class="flex-shrink-0" onchange="selectPolicy('${p.policyNumber}', '${p.issuedFrom}')">
+                    <div>
+                        <div class="fw-bold" style="font-size:.95rem;">${p.policyNumber}</div>
+                        <div class="text-muted" style="font-size:.82rem;">${p.companyName} · ${p.selectedTier} · Issued from ${p.issuedFrom}</div>
+                    </div>`;
+                listDiv.appendChild(div);
+            });
+
+            // Auto-select if only one policy
+            if (policies.length === 1) {
+                listDiv.querySelector('input[type=radio]').checked = true;
+                selectPolicy(policies[0].policyNumber, policies[0].issuedFrom);
+            }
+        } finally {
+            btn.innerHTML = '<i class="bi bi-search me-1"></i> Find Policies';
+            btn.disabled = false;
+        }
+    }
+
+    function selectPolicy(policyNumber, issuedFrom) {
+        referenceField.value = policyNumber;
+        setMinDate(issuedFrom);
+        enableSubmit(true);
+    }
+
+    // Radio switch listeners
+    radioPolicy.addEventListener('change', switchMode);
+    radioCustomer.addEventListener('change', switchMode);
+
+    // Enable submit as user types policy number directly
+    document.getElementById('policyNumberInput').addEventListener('input', function() {
+        syncReference(this.value);
+    });
+
+    // Allow Enter key to trigger lookup
+    document.getElementById('customerIdInput').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') { e.preventDefault(); lookupPolicies(); }
+    });
+</script>
 </body>
 </html>

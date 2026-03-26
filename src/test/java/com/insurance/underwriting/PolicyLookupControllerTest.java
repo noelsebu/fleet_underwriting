@@ -1,6 +1,8 @@
 package com.insurance.underwriting;
 
+import com.insurance.underwriting.entity.PolicyClaim;
 import com.insurance.underwriting.entity.UnderwritingRecord;
+import com.insurance.underwriting.repository.PolicyClaimRepository;
 import com.insurance.underwriting.repository.UnderwritingRecordRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,6 +12,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -22,6 +25,7 @@ class PolicyLookupControllerTest {
 
     @Autowired MockMvc mvc;
     @Autowired UnderwritingRecordRepository repo;
+    @Autowired PolicyClaimRepository claimRepo;
 
     // ── GET /policy/lookup ────────────────────────────────────────────────────
 
@@ -99,6 +103,39 @@ class PolicyLookupControllerTest {
         mvc.perform(get("/policy/check").param("reference", "PendingCo"))
            .andExpect(view().name("policy-lookup"))
            .andExpect(model().attributeExists("error"));
+    }
+
+    // ── Claims history on policy detail ──────────────────────────────────────
+
+    @Test
+    void checkPolicy_includesClaimsInModel() throws Exception {
+        repo.save(issuedRecord("CUST-2025-0020", "Pol-2025-20"));
+        claimRepo.save(PolicyClaim.builder()
+                .customerId("CUST-2025-0020")
+                .policyNumber("Pol-2025-20")
+                .companyName("LookupFleet")
+                .selectedTier("Basic")
+                .incidentDescription("Minor scrape.")
+                .claimAmount(new BigDecimal("800"))
+                .incidentDate(LocalDate.now())
+                .atFault(false)
+                .status("APPROVED")
+                .submittedAt(LocalDateTime.now())
+                .build());
+
+        mvc.perform(get("/policy/check").param("reference", "CUST-2025-0020"))
+           .andExpect(status().isOk())
+           .andExpect(view().name("policy-detail"))
+           .andExpect(model().attributeExists("claims"));
+    }
+
+    @Test
+    void checkPolicy_noClaims_returnsEmptyClaimsList() throws Exception {
+        repo.save(issuedRecord("CUST-2025-0021", "Pol-2025-21"));
+
+        mvc.perform(get("/policy/check").param("reference", "Pol-2025-21"))
+           .andExpect(status().isOk())
+           .andExpect(model().attribute("claims", org.hamcrest.Matchers.hasSize(0)));
     }
 
     // ── helper ────────────────────────────────────────────────────────────────

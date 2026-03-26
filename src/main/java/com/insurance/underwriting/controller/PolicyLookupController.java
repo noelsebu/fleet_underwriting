@@ -1,6 +1,7 @@
 package com.insurance.underwriting.controller;
 
 import com.insurance.underwriting.entity.UnderwritingRecord;
+import com.insurance.underwriting.repository.PolicyClaimRepository;
 import com.insurance.underwriting.repository.UnderwritingRecordRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
@@ -17,6 +18,7 @@ import java.util.Optional;
 public class PolicyLookupController {
 
     private final UnderwritingRecordRepository recordRepository;
+    private final PolicyClaimRepository claimRepository;
 
     @GetMapping("/lookup")
     public String lookupForm() {
@@ -36,7 +38,10 @@ public class PolicyLookupController {
             return "policy-lookup";
         }
 
-        model.addAttribute("record", result.get());
+        UnderwritingRecord rec = result.get();
+        model.addAttribute("record", rec);
+        model.addAttribute("claims",
+                claimRepository.findByCustomerIdOrPolicyNumber(rec.getCustomerId(), rec.getPolicyNumber()));
         return "policy-detail";
     }
 }

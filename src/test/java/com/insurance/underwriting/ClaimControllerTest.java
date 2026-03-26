@@ -18,6 +18,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -51,7 +52,7 @@ class ClaimControllerTest {
            .param("reference", "CUST-2025-0099")
            .param("incidentDescription", "Rear-end collision on highway.")
            .param("claimAmount", "8500.00")
-           .param("incidentDate", "2025-06-15")
+           .param("incidentDate", LocalDate.now().toString())
            .param("atFault", "false"))
            .andExpect(status().isOk())
            .andExpect(view().name("claim-submitted"))
@@ -72,7 +73,7 @@ class ClaimControllerTest {
            .param("reference", "Pol-2025-100")
            .param("incidentDescription", "Vehicle theft at warehouse.")
            .param("claimAmount", "15000")
-           .param("incidentDate", "2025-07-01")
+           .param("incidentDate", LocalDate.now().toString())
            .param("atFault", "false"))
            .andExpect(status().isOk())
            .andExpect(view().name("claim-submitted"));
@@ -89,7 +90,7 @@ class ClaimControllerTest {
            .param("reference", "cust-2025-0101")   // lowercase
            .param("incidentDescription", "Windscreen damage.")
            .param("claimAmount", "1200")
-           .param("incidentDate", "2025-08-10")
+           .param("incidentDate", LocalDate.now().toString())
            .param("atFault", "false"))
            .andExpect(status().isOk())
            .andExpect(view().name("claim-submitted"));
@@ -104,7 +105,7 @@ class ClaimControllerTest {
            .param("reference", "Pol-2025-102")
            .param("incidentDescription", "Driver ran red light.")
            .param("claimAmount", "4000")
-           .param("incidentDate", "2025-09-01")
+           .param("incidentDate", LocalDate.now().toString())
            .param("atFault", "true"))
            .andExpect(view().name("claim-submitted"));
 
@@ -121,7 +122,7 @@ class ClaimControllerTest {
            .param("reference", "UNKNOWN-9999")
            .param("incidentDescription", "Some incident.")
            .param("claimAmount", "500")
-           .param("incidentDate", "2025-06-01")
+           .param("incidentDate", LocalDate.now().toString())
            .param("atFault", "false"))
            .andExpect(status().isOk())
            .andExpect(view().name("claim-form"))
@@ -151,7 +152,7 @@ class ClaimControllerTest {
            .param("reference", "CUST-2025-0200")
            .param("incidentDescription", "Incident.")
            .param("claimAmount", "1000")
-           .param("incidentDate", "2025-06-01")
+           .param("incidentDate", LocalDate.now().toString())
            .param("atFault", "false"))
            .andExpect(status().isOk())
            .andExpect(view().name("claim-form"))
@@ -167,11 +168,74 @@ class ClaimControllerTest {
            .param("reference", "CUST-2025-0103")
            .param("incidentDescription", "Flood damage to 3 vehicles.")
            .param("claimAmount", "22000")
-           .param("incidentDate", "2025-10-05")
+           .param("incidentDate", LocalDate.now().toString())
            .param("atFault", "false"))
            .andExpect(model().attribute("claim",
                    org.hamcrest.Matchers.hasProperty("claimAmount",
                            org.hamcrest.Matchers.comparesEqualTo(new BigDecimal("22000")))));
+    }
+
+    // ── Incident date validation ─────────────────────────────────────────────
+
+    @Test
+    void submitClaim_incidentDateBeforePolicyDate_returnsFormWithError() throws Exception {
+        // Policy was submitted today; incident date set to yesterday — should be blocked
+        UnderwritingRecord policy = issuedPolicy("CUST-2025-0120", "Pol-2025-120");
+        String beforePolicy = policy.getSubmittedAt().toLocalDate().minusDays(1).toString();
+
+        mvc.perform(post("/claim/submit").with(csrf())
+           .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+           .param("reference", "Pol-2025-120")
+           .param("incidentDescription", "Backdated incident.")
+           .param("claimAmount", "5000")
+           .param("incidentDate", beforePolicy)
+           .param("atFault", "false"))
+           .andExpect(status().isOk())
+           .andExpect(view().name("claim-form"))
+           .andExpect(model().attributeExists("error"));
+    }
+
+    @Test
+    void submitClaim_incidentDateOnPolicyDate_isAllowed() throws Exception {
+        UnderwritingRecord policy = issuedPolicy("CUST-2025-0121", "Pol-2025-121");
+        String onPolicyDate = policy.getSubmittedAt().toLocalDate().toString();
+
+        mvc.perform(post("/claim/submit").with(csrf())
+           .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+           .param("reference", "Pol-2025-121")
+           .param("incidentDescription", "Incident on the day of purchase.")
+           .param("claimAmount", "2000")
+           .param("incidentDate", onPolicyDate)
+           .param("atFault", "false"))
+           .andExpect(view().name("claim-submitted"));
+    }
+
+    // ── /claim/policies AJAX endpoint ────────────────────────────────────────
+
+    @Test
+    void policiesByCustomerId_returnsMatchingPolicies() throws Exception {
+        issuedPolicy("CUST-2025-0130", "Pol-2025-130");
+
+        mvc.perform(get("/claim/policies").param("customerId", "CUST-2025-0130"))
+           .andExpect(status().isOk())
+           .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+           .andExpect(content().string(containsString("Pol-2025-130")));
+    }
+
+    @Test
+    void policiesByCustomerId_unknownId_returnsEmptyArray() throws Exception {
+        mvc.perform(get("/claim/policies").param("customerId", "CUST-0000-0000"))
+           .andExpect(status().isOk())
+           .andExpect(content().string("[]"));
+    }
+
+    @Test
+    void policiesByCustomerId_caseInsensitive_matchesUppercase() throws Exception {
+        issuedPolicy("CUST-2025-0131", "Pol-2025-131");
+
+        mvc.perform(get("/claim/policies").param("customerId", "cust-2025-0131"))
+           .andExpect(status().isOk())
+           .andExpect(content().string(containsString("Pol-2025-131")));
     }
 
     // ── Duplicate claim prevention ────────────────────────────────────────────
@@ -186,7 +250,7 @@ class ClaimControllerTest {
            .param("reference", "Pol-2025-110")
            .param("incidentDescription", "First incident.")
            .param("claimAmount", "3000")
-           .param("incidentDate", "2025-06-01")
+           .param("incidentDate", LocalDate.now().toString())
            .param("atFault", "false"))
            .andExpect(view().name("claim-submitted"));
 
@@ -226,7 +290,7 @@ class ClaimControllerTest {
            .param("reference", "Pol-2025-111")
            .param("incidentDescription", "New incident after approval.")
            .param("claimAmount", "4000")
-           .param("incidentDate", "2025-08-01")
+           .param("incidentDate", LocalDate.now().toString())
            .param("atFault", "false"))
            .andExpect(view().name("claim-submitted"));
     }

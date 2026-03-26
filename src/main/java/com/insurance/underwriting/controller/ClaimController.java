@@ -13,7 +13,11 @@ import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/claim")
@@ -26,6 +30,27 @@ public class ClaimController {
     @GetMapping("/new")
     public String claimForm() {
         return "claim-form";
+    }
+
+    /**
+     * AJAX endpoint: returns all POLICY_ISSUED records for a given customer ID.
+     * Used by the claim form to populate the policy dropdown.
+     */
+    @GetMapping("/policies")
+    @ResponseBody
+    public List<Map<String, String>> policiesByCustomerId(@RequestParam String customerId) {
+        return recordRepository
+                .findByCustomerIdAndWorkflowStatus(customerId.trim().toUpperCase(), "POLICY_ISSUED")
+                .stream()
+                .map(r -> {
+                    Map<String, String> m = new LinkedHashMap<>();
+                    m.put("policyNumber", r.getPolicyNumber());
+                    m.put("companyName",  r.getCompanyName());
+                    m.put("selectedTier", r.getSelectedTier());
+                    m.put("issuedFrom",   r.getSubmittedAt().toLocalDate().toString());
+                    return m;
+                })
+                .collect(Collectors.toList());
     }
 
     @PostMapping("/submit")
@@ -52,6 +77,16 @@ public class ClaimController {
 
         UnderwritingRecord policy = record.get();
 
+        // ── Date validation: incident must not predate the policy ─────────────
+        LocalDate policyDate = policy.getSubmittedAt().toLocalDate();
+        if (incidentDate.isBefore(policyDate)) {
+            model.addAttribute("error",
+                    "Incident date cannot be before the policy issue date ("
+                    + policyDate + "). Please enter a valid date.");
+            return "claim-form";
+        }
+
+        // ── Block if a pending claim already exists ───────────────────────────
         boolean hasPendingClaim = claimRepository
                 .findByCustomerIdOrPolicyNumber(policy.getCustomerId(), policy.getPolicyNumber())
                 .stream()

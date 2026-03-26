@@ -25,6 +25,12 @@
         .policy-meta td:first-child { font-weight: 600; color: #666; width: 40%; }
         .coverage-pill { display: inline-flex; align-items: center; gap: 5px; background: #e9ecef; color: #333;
                          padding: 4px 12px; border-radius: 20px; font-size: .83rem; margin: 3px; }
+        .claims-card { border: none; border-radius: 14px; box-shadow: 0 2px 12px rgba(0,0,0,.07); }
+        .claim-row { border-bottom: 1px solid #f0f0f0; padding: 14px 0; }
+        .claim-row:last-child { border-bottom: none; }
+        .status-PENDING_REVIEW { background:#fff3cd; color:#664d03; }
+        .status-APPROVED       { background:#d1e7dd; color:#0f5132; }
+        .status-REJECTED       { background:#f8d7da; color:#842029; }
         footer { background: #1b3a5c; color: rgba(255,255,255,.6); text-align: center; padding: 20px; font-size: .85rem; }
     </style>
 </head>
@@ -36,11 +42,12 @@
     <span style="font-weight:700; font-size:1.1rem;">FleetGuard</span>
 </div>
 
-<div class="container py-5" style="max-width:680px;">
+<div class="container py-5" style="max-width:720px;">
     <h3 class="fw-bold mb-4" style="color:#1b3a5c;">
         <i class="bi bi-file-earmark-check-fill text-success me-2"></i>Your Policy
     </h3>
 
+    <!-- Policy Card -->
     <div class="policy-issued mb-4">
         <div class="policy-header"
              th:classappend="'policy-header-' + ${record.selectedTier.toLowerCase()}">
@@ -76,6 +83,10 @@
                     <td th:text="${record.riskCategory}"></td>
                 </tr>
                 <tr>
+                    <td>Policy Issued</td>
+                    <td th:text="${#temporals.format(record.submittedAt, 'dd MMM yyyy')}"></td>
+                </tr>
+                <tr>
                     <td>Coverage</td>
                     <td>
                         <span th:each="c : ${record.coverages}" class="coverage-pill">
@@ -86,13 +97,61 @@
                 </tr>
                 <tr>
                     <td>Contact Phone</td>
-                    <td>
-                        <span th:text="${record.phoneNumber}"></span>
-                        <small th:if="${record.phoneExtension != null and !record.phoneExtension.isEmpty()}"
-                               class="text-muted" th:text="' ext. ' + ${record.phoneExtension}"></small>
-                    </td>
+                    <td th:text="${record.phoneNumber}"></td>
                 </tr>
             </table>
+        </div>
+    </div>
+
+    <!-- Claims History -->
+    <div class="claims-card card mb-4">
+        <div class="card-body p-0">
+            <div class="d-flex align-items-center justify-content-between p-3 border-bottom">
+                <h6 class="fw-bold mb-0" style="color:#1b3a5c;">
+                    <i class="bi bi-file-earmark-medical me-2"></i>Claims History
+                </h6>
+                <a th:href="@{/claim/new}" class="btn btn-warning btn-sm">
+                    <i class="bi bi-plus-lg me-1"></i> File a Claim
+                </a>
+            </div>
+
+            <!-- Empty state -->
+            <div th:if="${#lists.isEmpty(claims)}" class="p-4 text-center text-muted">
+                <i class="bi bi-inbox" style="font-size:2rem; opacity:.3;"></i>
+                <p class="mb-0 mt-2 small">No claims have been filed on this policy.</p>
+            </div>
+
+            <!-- Claims list -->
+            <div th:if="${!#lists.isEmpty(claims)}" class="px-3">
+                <div class="claim-row" th:each="c : ${claims}">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div style="flex:1;">
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <span class="badge rounded-pill"
+                                      th:classappend="'status-' + ${c.status}"
+                                      th:text="${c.status.replace('_', ' ')}"></span>
+                                <span th:if="${c.atFault}" class="badge bg-danger" style="font-size:.72rem;">At Fault</span>
+                                <span class="text-muted" style="font-size:.8rem;"
+                                      th:text="${#temporals.format(c.submittedAt, 'dd MMM yyyy HH:mm')}"></span>
+                            </div>
+                            <div class="fw-semibold" style="font-size:.9rem;" th:text="${c.incidentDescription}"></div>
+                            <div class="text-muted small mt-1">
+                                Incident: <span th:text="${#temporals.format(c.incidentDate, 'dd MMM yyyy')}"></span>
+                            </div>
+                            <div th:if="${c.adminNote != null and !#strings.isEmpty(c.adminNote)}"
+                                 class="mt-2 p-2 rounded small"
+                                 style="background:#f8f9fa; color:#555; border-left:3px solid #adb5bd;">
+                                <strong>Admin note:</strong> <span th:text="${c.adminNote}"></span>
+                            </div>
+                        </div>
+                        <div class="text-end ms-3 flex-shrink-0">
+                            <div class="fw-bold" style="font-size:1.05rem; color:#1b3a5c;"
+                                 th:text="'$' + ${c.claimAmount}"></div>
+                            <div class="text-muted" style="font-size:.78rem;">claim amount</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
