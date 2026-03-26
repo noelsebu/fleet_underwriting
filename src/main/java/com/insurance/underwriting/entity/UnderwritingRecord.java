@@ -10,6 +10,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 @Entity
 @Table(name = "underwriting_records")
@@ -46,12 +47,14 @@ public class UnderwritingRecord {
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "record_decision_factors", joinColumns = @JoinColumn(name = "record_id"))
     @Column(name = "factor")
+    @OrderColumn(name = "factor_order")
     @Builder.Default
     private List<String> decisionFactors = new ArrayList<>();
 
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "record_coverages", joinColumns = @JoinColumn(name = "record_id"))
     @Column(name = "coverage")
+    @OrderColumn(name = "coverage_order")
     @Builder.Default
     private List<String> coverages = new ArrayList<>();
 }
