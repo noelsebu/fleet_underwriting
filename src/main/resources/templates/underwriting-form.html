@@ -99,14 +99,6 @@
                     <div class="invalid-feedback" th:if="${#fields.hasErrors('businessInfo.phoneNumber')}"
                          th:errors="*{businessInfo.phoneNumber}"></div>
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label">Ext. <small class="text-muted">(optional)</small></label>
-                    <input type="text" th:field="*{businessInfo.phoneExtension}"
-                           th:classappend="${#fields.hasErrors('businessInfo.phoneExtension')} ? 'is-invalid'"
-                           class="form-control" placeholder="123" />
-                    <div class="invalid-feedback" th:if="${#fields.hasErrors('businessInfo.phoneExtension')}"
-                         th:errors="*{businessInfo.phoneExtension}"></div>
-                </div>
                 <div class="col-md-3">
                     <label class="form-label">Years Operating</label>
                     <input type="number" th:field="*{businessInfo.yearsInOperation}"

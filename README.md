@@ -1,24 +1,54 @@
 # FleetGuard — Fleet Underwriting Risk Scoring
 
-A Spring Boot application with a Thymeleaf web UI that automates insurance underwriting decisions for commercial vehicle fleets. Submit your fleet profile through the web form, get a risk-adjusted quote instantly, and receive a generated policy document across Basic, Premium, and Diamond tiers.
+A Spring Boot application with a Thymeleaf web UI that automates insurance underwriting decisions for commercial vehicle fleets. Customers submit their fleet profile, get an instant risk assessment, and receive a policy — or have their application reviewed by an admin.
 
 ## Features
 
 - Web UI built with Thymeleaf and Bootstrap 5
 - Landing page with plan selection (Basic, Premium, Diamond)
-- Underwriting form covering business info, fleet details, driver pool, and claims history
+- Underwriting form with phone number validation
 - Risk scoring engine using a sigmoid-normalised weighted sum
-- Instant policy generation with a unique policy number
+- Customer workflow: instant policy for LOW risk, admin review queue for MEDIUM/HIGH
+- Admin portal with login, review queue, approve/reject actions
+- Customer ID assigned on policy issuance
+- Policy lookup by Customer ID or Policy Number
+- PostgreSQL persistence (H2 in-memory for local dev)
 
-## How It Works
+## User Roles
 
-### Web Flow
+### Customer
+1. Go to the landing page and choose a plan
+2. Fill in your fleet details (including phone number)
+3. Submit to get your risk assessment:
+   - **LOW risk** — click "Accept & Generate Policy" to issue your policy instantly
+   - **MEDIUM / HIGH risk** — application goes to the admin review queue
+4. On policy issuance you receive a **Customer ID** (e.g. `CUST-2026-0001`)
+5. Use your Customer ID or Policy Number at `/policy/lookup` to view your coverage
 
-1. **Choose a Plan** — Select Basic, Premium, or Diamond coverage on the landing page
-2. **Fill In Your Details** — Enter business, fleet, driver, and claims information
-3. **Get Your Policy** — Receive your risk-adjusted quote and policy number instantly
+### Admin
+- Login at `/admin/login` (default: `admin` / `admin123`)
+- **Review Queue** (`/admin/queue`) — pending MEDIUM/HIGH risk applications; approve or reject each
+- **All Submissions** (`/admin/all`) — full history with workflow status
 
-### Scoring Dimensions
+## Workflow
+
+```
+Customer submits quote
+        │
+        ├── LOW risk  ──► PENDING_CUSTOMER_ACCEPTANCE
+        │                        │
+        │               Customer clicks Accept
+        │                        │
+        │                   POLICY_ISSUED ──► Customer ID assigned
+        │
+        └── MEDIUM / HIGH risk ──► PENDING_ADMIN_REVIEW
+                                          │
+                              Admin approves / rejects
+                                 │              │
+                          POLICY_ISSUED      REJECTED
+```
+
+## Risk Scoring
 
 Each submission is scored across four dimensions:
 
@@ -29,7 +59,7 @@ Each submission is scored across four dimensions:
 | Driver Pool | Average driver age, pool size |
 | Claims History | Frequency, severity, at-fault rate |
 
-Dimension scores are summed and passed through a **sigmoid function** to produce a normalized score between 0 and 1:
+Dimension scores are summed and passed through a **sigmoid function** to produce a normalised score between 0 and 1:
 
 | Score | Category | Action | Premium Multiplier |
 |---|---|---|---|
@@ -46,6 +76,7 @@ Dimension scores are summed and passed through a **sigmoid function** to produce
 {
   "businessInfo": {
     "companyName": "Acme Logistics",
+    "phoneNumber": "+441234567890",
     "yearsInOperation": 8,
     "creditScore": 720,
     "warZone": false
@@ -82,7 +113,7 @@ Dimension scores are summed and passed through a **sigmoid function** to produce
 
 ## Configuration
 
-All scoring weights and thresholds are externalized in `application.properties` and can be overridden per environment without code changes.
+All scoring weights and thresholds are externalized in `application.properties`.
 
 ```properties
 # Sigmoid tuning
@@ -92,10 +123,6 @@ risk.sigmoid.midpoint=0.55
 # Classification thresholds
 risk.thresholds.low=0.35
 risk.thresholds.medium=0.65
-
-# Weights (example)
-risk.weights.war-zone=0.20
-risk.weights.vehicle-truck=0.10
 ```
 
 ## Running Locally
@@ -104,10 +131,23 @@ risk.weights.vehicle-truck=0.10
 mvn spring-boot:run
 ```
 
-Server starts on `http://localhost:8080`.
+Server starts on `http://localhost:8080`. Uses H2 in-memory database by default.
+
+## Database (PostgreSQL on Render)
+
+Set the following environment variables on Render:
+
+| Variable | Value |
+|---|---|
+| `SPRING_DATASOURCE_URL` | `jdbc:postgresql://host:5432/dbname` |
+| `SPRING_DATASOURCE_USERNAME` | your db user |
+| `SPRING_DATASOURCE_PASSWORD` | your db password |
+| `SPRING_JPA_DATABASE_PLATFORM` | `org.hibernate.dialect.PostgreSQLDialect` |
 
 ## Running Tests
 
 ```bash
 mvn test
 ```
+
+35 tests across `RiskScoringServiceTest`, `PolicyGenerationServiceTest`, and `QuotationServiceTest`.
