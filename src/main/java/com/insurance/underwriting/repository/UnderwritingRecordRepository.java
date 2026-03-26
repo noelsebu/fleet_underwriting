@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface UnderwritingRecordRepository extends JpaRepository<UnderwritingRecord, Long> {
     List<UnderwritingRecord> findAllByOrderBySubmittedAtDesc();
+    List<UnderwritingRecord> findByWorkflowStatusOrderBySubmittedAtDesc(String workflowStatus);
 }

@@ -30,6 +30,13 @@ public class RiskScoreRequest {
         @NotBlank(message = "Company name is required")
         private String companyName;
 
+        @NotBlank(message = "Phone number is required")
+        @Pattern(regexp = "^\\+?[0-9]{7,15}$", message = "Enter a valid phone number (7–15 digits, optional + prefix)")
+        private String phoneNumber;
+
+        @Pattern(regexp = "^[0-9]{0,6}$", message = "Extension must be up to 6 digits")
+        private String phoneExtension;
+
         @Min(value = 0, message = "Years in operation cannot be negative")
         private int yearsInOperation;
 

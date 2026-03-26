@@ -8,6 +8,8 @@ import lombok.NoArgsConstructor;
 import javax.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "underwriting_records")
@@ -22,6 +24,8 @@ public class UnderwritingRecord {
     private Long id;
 
     private String companyName;
+    private String phoneNumber;
+    private String phoneExtension;
     private String selectedTier;
     private LocalDateTime submittedAt;
 
@@ -31,8 +35,23 @@ public class UnderwritingRecord {
     private String recommendedAction;
     private BigDecimal premiumMultiplier;
 
-    // Policy (null if HIGH risk)
+    // Workflow: PENDING_CUSTOMER_ACCEPTANCE | PENDING_ADMIN_REVIEW | POLICY_ISSUED | REJECTED
+    private String workflowStatus;
+
+    // Policy (set when POLICY_ISSUED)
     private String policyNumber;
-    private String policyStatus;
+    private String customerId;
     private BigDecimal annualPremium;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "record_decision_factors", joinColumns = @JoinColumn(name = "record_id"))
+    @Column(name = "factor")
+    @Builder.Default
+    private List<String> decisionFactors = new ArrayList<>();
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "record_coverages", joinColumns = @JoinColumn(name = "record_id"))
+    @Column(name = "coverage")
+    @Builder.Default
+    private List<String> coverages = new ArrayList<>();
 }

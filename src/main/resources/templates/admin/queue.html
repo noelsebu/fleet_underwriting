@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>FleetGuard — Admin Queue</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body { background: #f0f4f8; }
+        .sidebar { background: linear-gradient(180deg, #0d1b2a, #1b3a5c); min-height: 100vh;
+                   width: 220px; position: fixed; top: 0; left: 0; padding: 24px 0; }
+        .sidebar .brand { color: white; font-weight: 700; font-size: 1.1rem; padding: 0 20px 24px; border-bottom: 1px solid rgba(255,255,255,.1); }
+        .sidebar a { display: flex; align-items: center; gap: 10px; color: rgba(255,255,255,.7);
+                     text-decoration: none; padding: 12px 20px; font-size: .92rem; transition: background .15s; }
+        .sidebar a:hover, .sidebar a.active { background: rgba(255,255,255,.1); color: white; }
+        .main { margin-left: 220px; padding: 32px; }
+        .badge-MEDIUM { background: #fff3cd; color: #664d03; }
+        .badge-HIGH   { background: #f8d7da; color: #842029; }
+        .card { border: none; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,.06); }
+    </style>
+</head>
+<body>
+
+<div class="sidebar">
+    <div class="brand"><i class="bi bi-shield-check me-2"></i>FleetGuard Admin</div>
+    <a th:href="@{/admin/queue}" class="active"><i class="bi bi-inbox"></i> Review Queue</a>
+    <a th:href="@{/admin/all}"><i class="bi bi-list-ul"></i> All Submissions</a>
+    <a th:href="@{/admin/logout}" style="margin-top:auto; position:absolute; bottom:20px; width:100%;"><i class="bi bi-box-arrow-left"></i> Logout</a>
+</div>
+
+<div class="main">
+    <h2 class="fw-bold mb-1" style="color:#1b3a5c;">Review Queue</h2>
+    <p class="text-muted mb-4">Applications requiring manual underwriting review.</p>
+
+    <div th:if="${#lists.isEmpty(records)}" class="alert alert-success">
+        <i class="bi bi-check-circle-fill me-2"></i>Queue is empty — no pending applications.
+    </div>
+
+    <div th:if="${!#lists.isEmpty(records)}" class="card">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Company</th>
+                        <th>Phone</th>
+                        <th>Tier</th>
+                        <th>Risk Score</th>
+                        <th>Category</th>
+                        <th>Annual Premium</th>
+                        <th>Submitted</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="r : ${records}">
+                        <td class="fw-semibold" th:text="${r.companyName}"></td>
+                        <td>
+                            <span th:text="${r.phoneNumber}"></span>
+                            <small th:if="${r.phoneExtension != null and !r.phoneExtension.isEmpty()}"
+                                   class="text-muted" th:text="' ext. ' + ${r.phoneExtension}"></small>
+                        </td>
+                        <td th:text="${r.selectedTier}"></td>
+                        <td th:text="${r.riskScore}"></td>
+                        <td>
+                            <span class="badge rounded-pill"
+                                  th:classappend="'badge-' + ${r.riskCategory}"
+                                  th:text="${r.riskCategory}"></span>
+                        </td>
+                        <td th:text="'$' + ${r.annualPremium}"></td>
+                        <td th:text="${#temporals.format(r.submittedAt, 'dd MMM yyyy HH:mm')}"></td>
+                        <td>
+                            <form th:action="@{/admin/approve/{id}(id=${r.id})}" method="post" class="d-inline">
+                                <button type="submit" class="btn btn-success btn-sm">
+                                    <i class="bi bi-check-lg"></i> Approve
+                                </button>
+                            </form>
+                            <form th:action="@{/admin/reject/{id}(id=${r.id})}" method="post" class="d-inline ms-1">
+                                <button type="submit" class="btn btn-danger btn-sm">
+                                    <i class="bi bi-x-lg"></i> Reject
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
