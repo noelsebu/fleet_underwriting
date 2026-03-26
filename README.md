@@ -1,10 +1,26 @@
-# Fleet Underwriting Risk Scoring API
+# FleetGuard — Fleet Underwriting Risk Scoring
 
-A Spring Boot REST API that automates insurance underwriting decisions for commercial vehicle fleets. Accepts a fleet profile and returns a risk score, recommended action, and premium multiplier.
+A Spring Boot application with a Thymeleaf web UI that automates insurance underwriting decisions for commercial vehicle fleets. Submit your fleet profile through the web form, get a risk-adjusted quote instantly, and receive a generated policy document across Basic, Premium, and Diamond tiers.
+
+## Features
+
+- Web UI built with Thymeleaf and Bootstrap 5
+- Landing page with plan selection (Basic, Premium, Diamond)
+- Underwriting form covering business info, fleet details, driver pool, and claims history
+- Risk scoring engine using a sigmoid-normalised weighted sum
+- Instant policy generation with a unique policy number
 
 ## How It Works
 
-Each request is scored across four dimensions:
+### Web Flow
+
+1. **Choose a Plan** — Select Basic, Premium, or Diamond coverage on the landing page
+2. **Fill In Your Details** — Enter business, fleet, driver, and claims information
+3. **Get Your Policy** — Receive your risk-adjusted quote and policy number instantly
+
+### Scoring Dimensions
+
+Each submission is scored across four dimensions:
 
 | Dimension | Factors |
 |---|---|
@@ -13,7 +29,7 @@ Each request is scored across four dimensions:
 | Driver Pool | Average driver age, pool size |
 | Claims History | Frequency, severity, at-fault rate |
 
-Dimension scores are summed and passed through a **sigmoid function** to produce a normalized score between 0 and 1, which maps to a final decision:
+Dimension scores are summed and passed through a **sigmoid function** to produce a normalized score between 0 and 1:
 
 | Score | Category | Action | Premium Multiplier |
 |---|---|---|---|
@@ -21,7 +37,7 @@ Dimension scores are summed and passed through a **sigmoid function** to produce
 | ≤ 0.65 | MEDIUM | REVIEW | 1.5× – 2.0× |
 | > 0.65 | HIGH | REJECT | 2.0× – 2.5× |
 
-## Endpoints
+## REST API
 
 ### `POST /api/v1/underwriting/score`
 
