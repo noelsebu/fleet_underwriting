@@ -17,7 +17,7 @@ public class RiskScoringProperties {
 
     public static class Sigmoid {
         private double steepness = 6.0;
-        private double midpoint  = 0.55;
+        private double midpoint  = 0.35;
 
         public double getSteepness() { return steepness; }
         public void setSteepness(double steepness) { this.steepness = steepness; }

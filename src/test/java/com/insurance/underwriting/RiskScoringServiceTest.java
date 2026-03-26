@@ -94,14 +94,14 @@ class RiskScoringServiceTest {
 
     @Test
     void mediumRiskProfile_shouldReview() {
-        // Raw breakdown: business(3yr=0.06, credit650=0.04) + fleet(5yr=0.07, TRUCK=0.10)
-        //   + driver(age28=0.08) + claims(4/10=0.40→moderate=0.09, avg$10k→moderate=0.04)
-        //   = 0.48  →  sigmoid(0.48−0.55) ≈ 0.40  →  MEDIUM
+        // Raw: business(3yr=0.06, credit650=0.04) + fleet(5yr=0.07, VAN=0.07)
+        //   + driver(age28=0.08) + claims(2/15=0.13→low=0.03)
+        //   = 0.35  →  sigmoid(0.35, midpoint=0.35) = 0.50  →  MEDIUM
         RiskScoreResponse r = service.score(buildRequest(
                 3, 650,                          // young business, fair credit
-                10, 5.0, VehicleType.TRUCK,      // moderate fleet age, trucks
-                28.0, 15,                        // moderately young drivers
-                4, new BigDecimal("40000"), 1    // 4/10 = 0.40 per vehicle → moderate claims
+                15, 5.0, VehicleType.VAN,        // moderate fleet age, vans
+                28.0, 10,                        // moderately young drivers
+                2, new BigDecimal("5000"), 0     // low claims frequency
         ));
         assertThat(r.getRiskCategory()).isEqualTo(RiskCategory.MEDIUM);
         assertThat(r.getRecommendedAction()).isEqualTo(RecommendedAction.REVIEW);
