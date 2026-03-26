@@ -70,9 +70,14 @@ public class AdminController {
     public String queue(Model model) {
         model.addAttribute("records",
                 recordRepository.findByWorkflowStatusOrderBySubmittedAtDesc("PENDING_ADMIN_REVIEW"));
+        return "admin/queue";
+    }
+
+    @GetMapping("/negotiations")
+    public String negotiations(Model model) {
         model.addAttribute("negotiations",
                 recordRepository.findByWorkflowStatusOrderBySubmittedAtDesc("NEGOTIATION_REQUESTED"));
-        return "admin/queue";
+        return "admin/negotiations";
     }
 
     /** Admin sets a negotiated premium for a customer's request. */
@@ -84,7 +89,7 @@ public class AdminController {
         record.setNegotiatedPremium(negotiatedPremium);
         record.setWorkflowStatus("NEGOTIATION_OFFERED");
         recordRepository.save(record);
-        return "redirect:/admin/queue";
+        return "redirect:/admin/negotiations";
     }
 
     @GetMapping("/all")

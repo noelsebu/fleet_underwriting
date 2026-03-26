@@ -249,13 +249,24 @@ class AdminControllerTest {
 
     @Test
     @WithMockUser(username = "admin", authorities = "ROLE_ADMIN")
+    void negotiationsPage_showsNegotiationRequests() throws Exception {
+        recordRepo.save(pendingRecord("NegoCo2", "NEGOTIATION_REQUESTED"));
+
+        mvc.perform(get("/admin/negotiations"))
+           .andExpect(status().isOk())
+           .andExpect(view().name("admin/negotiations"))
+           .andExpect(model().attributeExists("negotiations"));
+    }
+
+    @Test
+    @WithMockUser(username = "admin", authorities = "ROLE_ADMIN")
     void setPremium_setsNegotiatedPremiumAndStatus() throws Exception {
         UnderwritingRecord record = recordRepo.save(pendingRecord("NegoCo", "NEGOTIATION_REQUESTED"));
 
         mvc.perform(post("/admin/set-premium/" + record.getId()).with(csrf())
            .param("negotiatedPremium", "3500.00"))
            .andExpect(status().is3xxRedirection())
-           .andExpect(redirectedUrl("/admin/queue"));
+           .andExpect(redirectedUrl("/admin/negotiations"));
 
         UnderwritingRecord updated = recordRepo.findById(record.getId()).orElseThrow();
         assertThat(updated.getWorkflowStatus()).isEqualTo("NEGOTIATION_OFFERED");
