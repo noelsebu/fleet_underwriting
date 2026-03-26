@@ -60,7 +60,7 @@ public class UnderwritingFormController {
                 .findFirst()
                 .orElse(quotes.get(0));
 
-        Optional<GeneratedPolicy> policy = policyGenerationService.generate(chosenQuote, response.getRiskCategory());
+        Optional<GeneratedPolicy> policy = policyGenerationService.generate(chosenQuote, response.getRiskCategory().name());
 
         model.addAttribute("response", response);
         model.addAttribute("chosenQuote", chosenQuote);
