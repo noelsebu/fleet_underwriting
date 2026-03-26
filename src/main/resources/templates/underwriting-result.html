@@ -102,7 +102,7 @@
         <div class="row align-items-center">
             <div class="col-md-3 text-center mb-3 mb-md-0">
                 <div class="risk-score-circle"
-                     th:classappend="'score-' + ${response.riskCategory.toLowerCase()}">
+                     th:classappend="'score-' + ${response.riskCategory.name().toLowerCase()}">
                     <div th:text="${#numbers.formatDecimal(response.riskScore, 1, 2)}"></div>
                     <div style="font-size:.65rem; font-weight:500; opacity:.7;">SCORE</div>
                 </div>
