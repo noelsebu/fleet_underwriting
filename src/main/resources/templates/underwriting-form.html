@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>FleetGuard — Get Your Quote</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body { background: #f0f4f8; }
+        .topbar {
+            background: linear-gradient(135deg, #0d1b2a, #1b3a5c);
+            color: white; padding: 18px 24px;
+            display: flex; align-items: center; gap: 12px;
+        }
+        .topbar a { color: rgba(255,255,255,.7); text-decoration: none; font-size: .9rem; }
+        .topbar a:hover { color: white; }
+
+        .tier-badge {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 6px 16px; border-radius: 20px; font-weight: 600; font-size: .9rem;
+        }
+        .tier-Basic   { background: #e9ecef; color: #495057; }
+        .tier-Premium { background: #cfe2ff; color: #084298; }
+        .tier-Diamond { background: #e8d5ff; color: #4e2d9e; }
+
+        .form-card {
+            background: white; border-radius: 14px;
+            box-shadow: 0 2px 16px rgba(0,0,0,.07); padding: 28px 32px; margin-bottom: 20px;
+        }
+        .section-title {
+            font-size: 1rem; font-weight: 700; color: #1b3a5c;
+            display: flex; align-items: center; gap: 8px;
+            border-bottom: 2px solid #e9ecef; padding-bottom: 10px; margin-bottom: 20px;
+        }
+        .section-title i { font-size: 1.1rem; }
+        .form-label { font-weight: 600; font-size: .88rem; color: #444; }
+        .form-control, .form-select {
+            border-radius: 8px; border: 1.5px solid #dee2e6;
+            padding: 10px 14px; font-size: .93rem; transition: border-color .2s;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: #0d6efd; box-shadow: 0 0 0 3px rgba(13,110,253,.12);
+        }
+        .is-invalid { border-color: #dc3545 !important; }
+
+        .btn-submit {
+            padding: 13px 40px; font-size: 1.05rem; font-weight: 700;
+            border-radius: 10px; border: none; color: white;
+            background: linear-gradient(135deg, #0a58ca, #0d6efd);
+            transition: opacity .2s, transform .15s;
+        }
+        .btn-submit:hover { opacity: .9; transform: translateY(-1px); color: white; }
+        .btn-submit-basic   { background: linear-gradient(135deg, #495057, #6c757d); }
+        .btn-submit-diamond { background: linear-gradient(135deg, #4e2d9e, #6f42c1); }
+    </style>
+</head>
+<body>
+
+<!-- Top bar -->
+<div class="topbar">
+    <a th:href="@{/}"><i class="bi bi-arrow-left"></i> Back</a>
+    <span style="opacity:.4">|</span>
+    <i class="bi bi-shield-check" style="font-size:1.3rem;"></i>
+    <span style="font-weight:700; font-size:1.1rem;">FleetGuard</span>
+    <span style="margin-left:auto;">
+        <span class="tier-badge"
+              th:classappend="'tier-' + ${selectedTier}"
+              th:text="${selectedTier} + ' Plan'"></span>
+    </span>
+</div>
+
+<div class="container py-4" style="max-width:720px;">
+    <h2 class="fw-bold mb-1" style="color:#1b3a5c;">Tell us about your fleet</h2>
+    <p class="text-muted mb-4">We'll calculate your personalised risk score and premium.</p>
+
+    <form th:action="@{/underwriting}" th:object="${request}" method="post" id="quoteForm">
+        <input type="hidden" name="selectedTier" th:value="${selectedTier}">
+
+        <!-- Business Info -->
+        <div class="form-card">
+            <div class="section-title">
+                <i class="bi bi-building text-primary"></i> Business Information
+            </div>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Company Name</label>
+                    <input type="text" th:field="*{businessInfo.companyName}"
+                           th:classappend="${#fields.hasErrors('businessInfo.companyName')} ? 'is-invalid'"
+                           class="form-control" placeholder="Acme Logistics Ltd." />
+                    <div class="invalid-feedback" th:if="${#fields.hasErrors('businessInfo.companyName')}"
+                         th:errors="*{businessInfo.companyName}"></div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Years Operating</label>
+                    <input type="number" th:field="*{businessInfo.yearsInOperation}"
+                           th:classappend="${#fields.hasErrors('businessInfo.yearsInOperation')} ? 'is-invalid'"
+                           class="form-control" min="0" placeholder="5" />
+                    <div class="invalid-feedback" th:if="${#fields.hasErrors('businessInfo.yearsInOperation')}"
+                         th:errors="*{businessInfo.yearsInOperation}"></div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Credit Score <small class="text-muted">(300–850)</small></label>
+                    <input type="number" th:field="*{businessInfo.creditScore}"
+                           th:classappend="${#fields.hasErrors('businessInfo.creditScore')} ? 'is-invalid'"
+                           class="form-control" min="300" max="850" placeholder="720" />
+                    <div class="invalid-feedback" th:if="${#fields.hasErrors('businessInfo.creditScore')}"
+                         th:errors="*{businessInfo.creditScore}"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Fleet Details -->
+        <div class="form-card">
+            <div class="section-title">
+                <i class="bi bi-truck text-success"></i> Fleet Details
+            </div>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Total Vehicles</label>
+                    <input type="number" th:field="*{fleetDetails.totalVehicles}"
+                           th:classappend="${#fields.hasErrors('fleetDetails.totalVehicles')} ? 'is-invalid'"
+                           class="form-control" min="1" placeholder="10" />
+                    <div class="invalid-feedback" th:if="${#fields.hasErrors('fleetDetails.totalVehicles')}"
+                         th:errors="*{fleetDetails.totalVehicles}"></div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Avg. Vehicle Age (yrs)</label>
+                    <input type="number" step="0.1" th:field="*{fleetDetails.averageVehicleAgeYears}"
+                           th:classappend="${#fields.hasErrors('fleetDetails.averageVehicleAgeYears')} ? 'is-invalid'"
+                           class="form-control" min="0" placeholder="3.5" />
+                    <div class="invalid-feedback" th:if="${#fields.hasErrors('fleetDetails.averageVehicleAgeYears')}"
+                         th:errors="*{fleetDetails.averageVehicleAgeYears}"></div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Primary Vehicle Type</label>
+                    <select th:field="*{fleetDetails.primaryVehicleType}"
+                            th:classappend="${#fields.hasErrors('fleetDetails.primaryVehicleType')} ? 'is-invalid'"
+                            class="form-select">
+                        <option value="">-- Select --</option>
+                        <option value="HATCHBACK">Hatchback</option>
+                        <option value="SEDAN">Sedan</option>
+                        <option value="SUV">SUV</option>
+                        <option value="VAN">Van</option>
+                        <option value="TRUCK">Truck</option>
+                    </select>
+                    <div class="invalid-feedback" th:if="${#fields.hasErrors('fleetDetails.primaryVehicleType')}"
+                         th:errors="*{fleetDetails.primaryVehicleType}"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Driver Pool -->
+        <div class="form-card">
+            <div class="section-title">
+                <i class="bi bi-people text-warning"></i> Driver Pool
+            </div>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Total Drivers</label>
+                    <input type="number" th:field="*{driverPool.totalDrivers}"
+                           th:classappend="${#fields.hasErrors('driverPool.totalDrivers')} ? 'is-invalid'"
+                           class="form-control" min="1" placeholder="8" />
+                    <div class="invalid-feedback" th:if="${#fields.hasErrors('driverPool.totalDrivers')}"
+                         th:errors="*{driverPool.totalDrivers}"></div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Average Driver Age</label>
+                    <input type="number" step="0.1" th:field="*{driverPool.averageDriverAge}"
+                           th:classappend="${#fields.hasErrors('driverPool.averageDriverAge')} ? 'is-invalid'"
+                           class="form-control" min="18" placeholder="35" />
+                    <div class="invalid-feedback" th:if="${#fields.hasErrors('driverPool.averageDriverAge')}"
+                         th:errors="*{driverPool.averageDriverAge}"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Claims History -->
+        <div class="form-card">
+            <div class="section-title">
+                <i class="bi bi-file-earmark-text text-danger"></i> Claims History <small class="fw-normal text-muted">(last 3 years)</small>
+            </div>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Number of Claims</label>
+                    <input type="number" th:field="*{claimsHistory.claimsLast3Years}"
+                           th:classappend="${#fields.hasErrors('claimsHistory.claimsLast3Years')} ? 'is-invalid'"
+                           class="form-control" min="0" placeholder="2" />
+                    <div class="invalid-feedback" th:if="${#fields.hasErrors('claimsHistory.claimsLast3Years')}"
+                         th:errors="*{claimsHistory.claimsLast3Years}"></div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Total Claim Amount ($)</label>
+                    <input type="number" step="0.01" th:field="*{claimsHistory.totalClaimAmount}"
+                           th:classappend="${#fields.hasErrors('claimsHistory.totalClaimAmount')} ? 'is-invalid'"
+                           class="form-control" min="0" placeholder="15000" />
+                    <div class="invalid-feedback" th:if="${#fields.hasErrors('claimsHistory.totalClaimAmount')}"
+                         th:errors="*{claimsHistory.totalClaimAmount}"></div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">At-Fault Claims</label>
+                    <input type="number" th:field="*{claimsHistory.atFaultCount}"
+                           th:classappend="${#fields.hasErrors('claimsHistory.atFaultCount') or #fields.hasErrors('claimsHistory.atFaultCountValid')} ? 'is-invalid'"
+                           class="form-control" min="0" placeholder="1" />
+                    <div class="invalid-feedback" th:if="${#fields.hasErrors('claimsHistory.atFaultCount')}"
+                         th:errors="*{claimsHistory.atFaultCount}"></div>
+                    <div class="invalid-feedback" th:if="${#fields.hasErrors('claimsHistory.atFaultCountValid')}"
+                         th:errors="*{claimsHistory.atFaultCountValid}"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-end">
+            <button type="submit" id="submitBtn"
+                    class="btn btn-submit"
+                    th:classappend="'btn-submit-' + ${selectedTier}">
+                <span id="btnText"><i class="bi bi-calculator"></i> Calculate My Quote</span>
+                <span id="btnLoading" style="display:none;">
+                    <span class="spinner-border spinner-border-sm me-2"></span>Calculating...
+                </span>
+            </button>
+        </div>
+    </form>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    document.getElementById('quoteForm').addEventListener('submit', function() {
+        document.getElementById('btnText').style.display = 'none';
+        document.getElementById('btnLoading').style.display = 'inline';
+        document.getElementById('submitBtn').disabled = true;
+    });
+</script>
+</body>
+</html>

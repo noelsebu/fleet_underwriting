@@ -74,5 +74,10 @@ public class RiskScoreRequest {
 
         @Min(value = 0)
         private int atFaultCount;
+
+        @AssertTrue(message = "At-fault claims cannot exceed total number of claims")
+        public boolean isAtFaultCountValid() {
+            return atFaultCount <= claimsLast3Years;
+        }
     }
 }

@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>FleetGuard — Your Quote Result</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body { background: #f0f4f8; }
+        .topbar {
+            background: linear-gradient(135deg, #0d1b2a, #1b3a5c);
+            color: white; padding: 18px 24px;
+            display: flex; align-items: center; gap: 12px;
+        }
+        .topbar a { color: rgba(255,255,255,.7); text-decoration: none; font-size: .9rem; }
+        .topbar a:hover { color: white; }
+
+        /* Risk meter */
+        .risk-card { background: white; border-radius: 14px; box-shadow: 0 2px 16px rgba(0,0,0,.07); padding: 28px 32px; }
+        .risk-score-circle {
+            width: 110px; height: 110px; border-radius: 50%;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            font-size: 1.7rem; font-weight: 800; border: 6px solid;
+            margin: 0 auto 12px;
+        }
+        .score-low    { border-color: #198754; color: #198754; background: #f0fff4; }
+        .score-medium { border-color: #ffc107; color: #856404; background: #fffdf0; }
+        .score-high   { border-color: #dc3545; color: #dc3545; background: #fff5f5; }
+        .badge-LOW    { background: #d1e7dd; color: #0f5132; }
+        .badge-MEDIUM { background: #fff3cd; color: #664d03; }
+        .badge-HIGH   { background: #f8d7da; color: #842029; }
+        .action-APPROVE { color: #198754; font-weight: 700; }
+        .action-REVIEW  { color: #856404; font-weight: 700; }
+        .action-REJECT  { color: #dc3545; font-weight: 700; }
+
+        .factor-item {
+            background: #f8f9fa; border-radius: 8px; padding: 8px 14px;
+            font-size: .88rem; color: #444; display: flex; align-items: center; gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        /* Policy card */
+        .policy-issued {
+            border-radius: 14px; overflow: hidden;
+            box-shadow: 0 4px 24px rgba(0,0,0,.12);
+        }
+        .policy-header {
+            padding: 24px 28px; color: white;
+        }
+        .policy-header-basic   { background: linear-gradient(135deg, #495057, #6c757d); }
+        .policy-header-premium { background: linear-gradient(135deg, #0a58ca, #0d6efd); }
+        .policy-header-diamond { background: linear-gradient(135deg, #4e2d9e, #6f42c1); }
+        .policy-body { background: white; padding: 24px 28px; }
+        .policy-number {
+            font-family: 'Courier New', monospace;
+            font-size: 1.3rem; font-weight: 700; letter-spacing: 2px;
+            background: rgba(255,255,255,.2); display: inline-block;
+            padding: 4px 12px; border-radius: 6px; margin-top: 6px;
+        }
+        .policy-meta td { padding: 8px 0; font-size: .92rem; border-bottom: 1px solid #f0f0f0; }
+        .policy-meta td:first-child { font-weight: 600; color: #666; width: 45%; }
+        .status-ACTIVE        { background:#d1e7dd; color:#0f5132; padding:3px 10px; border-radius:20px; font-size:.8rem; font-weight:700; }
+        .status-PENDING_REVIEW{ background:#fff3cd; color:#664d03; padding:3px 10px; border-radius:20px; font-size:.8rem; font-weight:700; }
+
+        .coverage-pill {
+            display: inline-flex; align-items: center; gap: 5px;
+            background: #e9ecef; color: #333;
+            padding: 4px 12px; border-radius: 20px; font-size: .83rem; margin: 3px;
+        }
+
+        /* Rejected banner */
+        .rejected-banner {
+            background: #f8d7da; border: 1.5px solid #f5c2c7;
+            border-radius: 12px; padding: 20px 24px;
+        }
+
+        /* Animate in */
+        @keyframes fadeUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+        .animate-in { animation: fadeUp .5s ease forwards; }
+        .delay-1 { animation-delay: .1s; opacity: 0; }
+        .delay-2 { animation-delay: .25s; opacity: 0; }
+        .delay-3 { animation-delay: .4s; opacity: 0; }
+    </style>
+</head>
+<body>
+
+<div class="topbar">
+    <a th:href="@{/}"><i class="bi bi-arrow-left"></i> Back to Plans</a>
+    <span style="opacity:.4">|</span>
+    <i class="bi bi-shield-check" style="font-size:1.3rem;"></i>
+    <span style="font-weight:700; font-size:1.1rem;">FleetGuard</span>
+</div>
+
+<div class="container py-4" style="max-width:760px;">
+
+    <h2 class="fw-bold mb-1 animate-in" style="color:#1b3a5c;">Your Quote Result</h2>
+    <p class="text-muted mb-4 animate-in delay-1">Here's your personalised risk assessment and policy details.</p>
+
+    <!-- Risk Assessment -->
+    <div class="risk-card mb-4 animate-in delay-1">
+        <div class="row align-items-center">
+            <div class="col-md-3 text-center mb-3 mb-md-0">
+                <div class="risk-score-circle"
+                     th:classappend="'score-' + ${response.riskCategory.toLowerCase()}">
+                    <div th:text="${#numbers.formatDecimal(response.riskScore, 1, 2)}"></div>
+                    <div style="font-size:.65rem; font-weight:500; opacity:.7;">SCORE</div>
+                </div>
+                <span class="badge rounded-pill px-3 py-2"
+                      th:classappend="'badge-' + ${response.riskCategory}"
+                      th:text="${response.riskCategory}"></span>
+            </div>
+            <div class="col-md-9">
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <div>
+                        <div class="text-muted small">Recommended Action</div>
+                        <div th:classappend="'action-' + ${response.recommendedAction}"
+                             th:text="${response.recommendedAction}" style="font-size:1.1rem;"></div>
+                    </div>
+                    <div class="vr"></div>
+                    <div>
+                        <div class="text-muted small">Risk Multiplier</div>
+                        <div style="font-size:1.1rem; font-weight:700;"
+                             th:text="${response.premiumMultiplier} + '×'"></div>
+                    </div>
+                </div>
+                <div th:if="${response.decisionFactors != null and !response.decisionFactors.isEmpty()}">
+                    <div class="text-muted small fw-bold mb-2">RISK FACTORS</div>
+                    <div th:each="f : ${response.decisionFactors}" class="factor-item">
+                        <i class="bi bi-exclamation-triangle-fill text-warning"></i>
+                        <span th:text="${f}"></span>
+                    </div>
+                </div>
+                <div th:if="${response.decisionFactors == null or response.decisionFactors.isEmpty()}"
+                     class="factor-item">
+                    <i class="bi bi-check-circle-fill text-success"></i>
+                    <span>No significant risk factors identified — excellent profile!</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Policy Issued -->
+    <div th:if="${policy != null}" class="animate-in delay-2">
+        <h4 class="fw-bold mb-3" style="color:#1b3a5c;">
+            <i class="bi bi-file-earmark-check-fill text-success me-2"></i>Policy Issued
+        </h4>
+        <div class="policy-issued mb-4">
+            <div class="policy-header"
+                 th:classappend="'policy-header-' + ${policy.tier.toLowerCase()}">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div style="font-size:.8rem; opacity:.8; text-transform:uppercase; letter-spacing:1px;">Policy Number</div>
+                        <div class="policy-number" th:text="${policy.policyNumber}"></div>
+                    </div>
+                    <div class="text-end">
+                        <div style="font-size:.8rem; opacity:.8;">Plan</div>
+                        <div style="font-size:1.2rem; font-weight:700;" th:text="${policy.tier}"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="policy-body">
+                <table class="policy-meta w-100">
+                    <tr>
+                        <td>Annual Premium</td>
+                        <td style="font-size:1.2rem; font-weight:800; color:#0d6efd;">
+                            $<span th:text="${policy.annualPremium}"></span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Issue Date</td>
+                        <td th:text="${policy.issueDate}"></td>
+                    </tr>
+                    <tr>
+                        <td>Status</td>
+                        <td>
+                            <span th:classappend="'status-' + ${policy.status}"
+                                  th:text="${policy.status == 'PENDING_REVIEW' ? 'Pending Review' : 'Active'}"></span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Coverage</td>
+                        <td>
+                            <span th:each="c : ${policy.coverages}" class="coverage-pill">
+                                <i class="bi bi-check-circle-fill text-success"></i>
+                                <span th:text="${c}"></span>
+                            </span>
+                        </td>
+                    </tr>
+                </table>
+
+                <div th:if="${policy.status == 'PENDING_REVIEW'}"
+                     class="alert alert-warning mt-3 d-flex align-items-center gap-2 mb-0" role="alert">
+                    <i class="bi bi-info-circle-fill"></i>
+                    Your policy is pending a manual underwriting review. Our team will contact you within 2 business days.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rejected -->
+    <div th:if="${policy == null}" class="rejected-banner animate-in delay-2 mb-4">
+        <div class="d-flex align-items-start gap-3">
+            <i class="bi bi-x-circle-fill text-danger" style="font-size:1.6rem; margin-top:2px;"></i>
+            <div>
+                <h5 class="fw-bold mb-1">Unable to Issue Policy</h5>
+                <p class="mb-2 text-muted">Based on your fleet's risk profile, we are unable to offer coverage at this time.</p>
+                <p class="mb-0 small">You may re-apply after addressing the risk factors above, or
+                    <a th:href="@{/}" class="fw-bold">explore other plans</a>.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="d-flex gap-3 animate-in delay-3">
+        <a th:href="@{/}" class="btn btn-outline-primary">
+            <i class="bi bi-arrow-left me-1"></i> Back to Plans
+        </a>
+        <a th:href="@{/underwriting(tier=${chosenQuote.tier})}" class="btn btn-light">
+            <i class="bi bi-arrow-clockwise me-1"></i> Try Again
+        </a>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
