@@ -68,8 +68,8 @@ class AdminControllerTest {
            .andExpect(view().name("admin/dashboard"))
            .andExpect(model().attributeExists(
                    "totalSubmissions", "pendingReview", "policiesIssued",
-                   "rejected", "totalRevenue", "totalClaims", "claimsPending",
-                   "claimsApproved", "claimsRejected",
+                   "rejected", "totalRevenue", "totalClaimsPaid", "negotiationQueue",
+                   "totalClaims", "claimsPending", "claimsApproved", "claimsRejected",
                    "recentSubmissions", "recentClaims"));
     }
 
@@ -239,6 +239,112 @@ class AdminControllerTest {
         PolicyClaim updated = claimRepo.findById(claim.getId()).orElseThrow();
         assertThat(updated.getStatus()).isEqualTo("REJECTED");
         assertThat(updated.getAdminNote()).isEqualTo("Insufficient documentation.");
+    }
+
+    // ── Set Premium (negotiation) ─────────────────────────────────────────────
+
+    @Test
+    @WithMockUser(username = "admin", authorities = "ROLE_ADMIN")
+    void setPremium_setsNegotiatedPremiumAndStatus() throws Exception {
+        UnderwritingRecord record = recordRepo.save(pendingRecord("NegoCo", "NEGOTIATION_REQUESTED"));
+
+        mvc.perform(post("/admin/set-premium/" + record.getId()).with(csrf())
+           .param("negotiatedPremium", "3500.00"))
+           .andExpect(status().is3xxRedirection())
+           .andExpect(redirectedUrl("/admin/queue"));
+
+        UnderwritingRecord updated = recordRepo.findById(record.getId()).orElseThrow();
+        assertThat(updated.getWorkflowStatus()).isEqualTo("NEGOTIATION_OFFERED");
+        assertThat(updated.getNegotiatedPremium()).isEqualByComparingTo("3500.00");
+    }
+
+    // ── Coverage limit expiry ─────────────────────────────────────────────────
+
+    @Test
+    @WithMockUser(username = "admin", authorities = "ROLE_ADMIN")
+    void approveClaim_exceedsCoverageLimit_expiresPolicy() throws Exception {
+        // Basic tier limit = $10,000
+        UnderwritingRecord policy = recordRepo.save(UnderwritingRecord.builder()
+                .companyName("CovTestCo")
+                .phoneNumber("5550000000")
+                .email("cov@test.com")
+                .selectedTier("Basic")
+                .submittedAt(java.time.LocalDateTime.now())
+                .riskScore(0.20)
+                .riskCategory("LOW")
+                .recommendedAction("APPROVE")
+                .premiumMultiplier(new BigDecimal("1.10"))
+                .annualPremium(new BigDecimal("4500"))
+                .workflowStatus("POLICY_ISSUED")
+                .policyNumber("Pol-2026-9999")
+                .customerId("CUST-2026-9999")
+                .issuedAt(java.time.LocalDateTime.now())
+                .expiresAt(java.time.LocalDateTime.now().plusYears(1))
+                .build());
+
+        // Approve a claim that pushes total over $10k
+        PolicyClaim claim = claimRepo.save(PolicyClaim.builder()
+                .customerId(policy.getCustomerId())
+                .policyNumber(policy.getPolicyNumber())
+                .companyName("CovTestCo")
+                .selectedTier("Basic")
+                .incidentDescription("Major collision.")
+                .claimAmount(new BigDecimal("11000"))
+                .incidentDate(java.time.LocalDate.now().minusDays(5))
+                .atFault(false)
+                .status("PENDING_REVIEW")
+                .submittedAt(java.time.LocalDateTime.now())
+                .build());
+
+        mvc.perform(post("/admin/claims/approve/" + claim.getId()).with(csrf()))
+           .andExpect(status().is3xxRedirection());
+
+        UnderwritingRecord updated = recordRepo.findById(policy.getId()).orElseThrow();
+        assertThat(updated.getExpiresAt()).isBefore(java.time.LocalDateTime.now().plusSeconds(5));
+        assertThat(updated.getExpiresAt()).isBefore(java.time.LocalDateTime.now().plusDays(1));
+    }
+
+    @Test
+    @WithMockUser(username = "admin", authorities = "ROLE_ADMIN")
+    void approveClaim_belowCoverageLimit_doesNotExpirePolicy() throws Exception {
+        UnderwritingRecord policy = recordRepo.save(UnderwritingRecord.builder()
+                .companyName("SafeCovCo")
+                .phoneNumber("5550000001")
+                .email("safe@test.com")
+                .selectedTier("Premium")
+                .submittedAt(java.time.LocalDateTime.now())
+                .riskScore(0.30)
+                .riskCategory("LOW")
+                .recommendedAction("APPROVE")
+                .premiumMultiplier(new BigDecimal("1.10"))
+                .annualPremium(new BigDecimal("5500"))
+                .workflowStatus("POLICY_ISSUED")
+                .policyNumber("Pol-2026-8888")
+                .customerId("CUST-2026-8888")
+                .issuedAt(java.time.LocalDateTime.now())
+                .expiresAt(java.time.LocalDateTime.now().plusYears(1))
+                .build());
+
+        PolicyClaim claim = claimRepo.save(PolicyClaim.builder()
+                .customerId(policy.getCustomerId())
+                .policyNumber(policy.getPolicyNumber())
+                .companyName("SafeCovCo")
+                .selectedTier("Premium")
+                .incidentDescription("Minor scratch.")
+                .claimAmount(new BigDecimal("2000"))
+                .incidentDate(java.time.LocalDate.now().minusDays(3))
+                .atFault(false)
+                .status("PENDING_REVIEW")
+                .submittedAt(java.time.LocalDateTime.now())
+                .build());
+
+        java.time.LocalDateTime originalExpiry = policy.getExpiresAt();
+
+        mvc.perform(post("/admin/claims/approve/" + claim.getId()).with(csrf()))
+           .andExpect(status().is3xxRedirection());
+
+        UnderwritingRecord updated = recordRepo.findById(policy.getId()).orElseThrow();
+        assertThat(updated.getExpiresAt()).isAfter(java.time.LocalDateTime.now());
     }
 
     @Test

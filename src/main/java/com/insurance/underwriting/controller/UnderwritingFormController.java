@@ -119,6 +119,37 @@ public class UnderwritingFormController {
         return "redirect:/underwriting/result/" + id;
     }
 
+    /** User requests a lower premium — enters negotiation queue. */
+    @PostMapping("/underwriting/negotiate/{id}")
+    public String requestNegotiation(@PathVariable Long id) {
+        UnderwritingRecord record = recordRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Record not found: " + id));
+        if ("PENDING_CUSTOMER_ACCEPTANCE".equals(record.getWorkflowStatus())) {
+            record.setWorkflowStatus("NEGOTIATION_REQUESTED");
+            recordRepository.save(record);
+        }
+        return "redirect:/underwriting/result/" + id;
+    }
+
+    /** User accepts the admin-offered negotiated premium — issues the policy. */
+    @PostMapping("/underwriting/accept-offer/{id}")
+    public String acceptNegotiatedOffer(@PathVariable Long id) {
+        UnderwritingRecord record = recordRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Record not found: " + id));
+        if (!"NEGOTIATION_OFFERED".equals(record.getWorkflowStatus())) {
+            return "redirect:/underwriting/result/" + id;
+        }
+        LocalDateTime now = LocalDateTime.now();
+        record.setWorkflowStatus("POLICY_ISSUED");
+        record.setAnnualPremium(record.getNegotiatedPremium());
+        record.setCustomerId(String.format("CUST-%d-%04d", LocalDate.now().getYear(), record.getId()));
+        record.setPolicyNumber(String.format("Pol-%d-%d", LocalDate.now().getYear(), record.getId()));
+        record.setIssuedAt(now);
+        record.setExpiresAt(now.plusYears(1));
+        recordRepository.save(record);
+        return "redirect:/underwriting/result/" + id;
+    }
+
     /** HIGH risk: user explicitly requests a policy review — assigns a tracking number. */
     @PostMapping("/underwriting/request/{id}")
     public String requestPolicyReview(@PathVariable Long id) {

@@ -106,6 +106,24 @@
                     </td>
                 </tr>
                 <tr>
+                    <td>Coverage Limit</td>
+                    <td>
+                        <div class="fw-bold" th:text="'$' + ${#numbers.formatDecimal(coverageLimit, 1, 'COMMA', 0, 'POINT')}"></div>
+                        <div class="progress mt-1" style="height:8px; max-width:220px;">
+                            <div class="progress-bar"
+                                 th:classappend="${coverageUsagePct >= 100} ? 'bg-danger' : (${coverageUsagePct >= 75} ? 'bg-warning' : 'bg-success')"
+                                 role="progressbar"
+                                 th:style="'width:' + ${coverageUsagePct} + '%'">
+                            </div>
+                        </div>
+                        <div class="small text-muted mt-1">
+                            <span th:text="'$' + ${#numbers.formatDecimal(approvedClaimsTotal, 1, 'COMMA', 2, 'POINT')}"></span>
+                            used of
+                            <span th:text="'$' + ${#numbers.formatDecimal(coverageLimit, 1, 'COMMA', 0, 'POINT')}"></span>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
                     <td>Contact Phone</td>
                     <td th:text="${record.phoneNumber}"></td>
                 </tr>

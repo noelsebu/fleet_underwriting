@@ -301,6 +301,50 @@ class UnderwritingFormControllerTest {
                 .isEqualTo("PENDING_ADMIN_REVIEW");
     }
 
+    // ── POST /underwriting/negotiate/{id} ────────────────────────────────────
+
+    @Test
+    void negotiatePolicy_lowRisk_setsNegotiationRequestedStatus() throws Exception {
+        UnderwritingRecord record = savedRecord("NegotiateFleet", "PENDING_CUSTOMER_ACCEPTANCE");
+
+        mvc.perform(post("/underwriting/negotiate/" + record.getId()).with(csrf()))
+           .andExpect(status().is3xxRedirection())
+           .andExpect(redirectedUrl("/underwriting/result/" + record.getId()));
+
+        assertThat(repo.findById(record.getId()).orElseThrow().getWorkflowStatus())
+                .isEqualTo("NEGOTIATION_REQUESTED");
+    }
+
+    @Test
+    void negotiatePolicy_nonLowRisk_doesNotChangeStatus() throws Exception {
+        UnderwritingRecord record = savedRecord("AlreadyReviewFleet", "PENDING_ADMIN_REVIEW");
+
+        mvc.perform(post("/underwriting/negotiate/" + record.getId()).with(csrf()))
+           .andExpect(status().is3xxRedirection());
+
+        assertThat(repo.findById(record.getId()).orElseThrow().getWorkflowStatus())
+                .isEqualTo("PENDING_ADMIN_REVIEW");
+    }
+
+    // ── POST /underwriting/accept-offer/{id} ─────────────────────────────────
+
+    @Test
+    void acceptOffer_negotiationOffered_issuesPolicyWithNegotiatedPremium() throws Exception {
+        UnderwritingRecord record = savedRecord("OfferFleet", "NEGOTIATION_OFFERED");
+        record.setNegotiatedPremium(new BigDecimal("3200"));
+        repo.save(record);
+
+        mvc.perform(post("/underwriting/accept-offer/" + record.getId()).with(csrf()))
+           .andExpect(status().is3xxRedirection())
+           .andExpect(redirectedUrl("/underwriting/result/" + record.getId()));
+
+        UnderwritingRecord updated = repo.findById(record.getId()).orElseThrow();
+        assertThat(updated.getWorkflowStatus()).isEqualTo("POLICY_ISSUED");
+        assertThat(updated.getAnnualPremium()).isEqualByComparingTo("3200");
+        assertThat(updated.getIssuedAt()).isNotNull();
+        assertThat(updated.getExpiresAt()).isNotNull();
+    }
+
     // ── POST /underwriting/request/{id} ──────────────────────────────────────
 
     @Test

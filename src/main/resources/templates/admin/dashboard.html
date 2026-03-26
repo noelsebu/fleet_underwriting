@@ -100,9 +100,9 @@
         </div>
     </div>
 
-    <!-- Revenue -->
+    <!-- Revenue & Claims Paid -->
     <div class="row g-3 mb-4">
-        <div class="col-12">
+        <div class="col-md-6">
             <div class="stat-card" style="background: linear-gradient(135deg, #0f5132, #198754); color: white;">
                 <div class="d-flex align-items-center gap-3">
                     <div class="stat-icon" style="background: rgba(255,255,255,.2);">
@@ -111,11 +111,35 @@
                     <div>
                         <div class="stat-value" style="color: white;"
                              th:text="'$' + ${#numbers.formatDecimal(totalRevenue, 1, 'COMMA', 2, 'POINT')}">$0.00</div>
-                        <div class="stat-label" style="color: rgba(255,255,255,.7);">Total Annual Premium Revenue (Active Policies)</div>
+                        <div class="stat-label" style="color: rgba(255,255,255,.7);">Total Annual Premium Revenue</div>
                     </div>
                 </div>
             </div>
         </div>
+        <div class="col-md-6">
+            <div class="stat-card" style="background: linear-gradient(135deg, #842029, #dc3545); color: white;">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="stat-icon" style="background: rgba(255,255,255,.2);">
+                        <i class="bi bi-cash-stack" style="color: white;"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value" style="color: white;"
+                             th:text="'$' + ${#numbers.formatDecimal(totalClaimsPaid, 1, 'COMMA', 2, 'POINT')}">$0.00</div>
+                        <div class="stat-label" style="color: rgba(255,255,255,.7);">Total Claims Paid Out</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Negotiation alert badge -->
+    <div th:if="${negotiationQueue > 0}" class="alert alert-warning d-flex align-items-center gap-2 mb-4">
+        <i class="bi bi-chat-left-dots-fill"></i>
+        <span>
+            <strong th:text="${negotiationQueue}"></strong> premium negotiation
+            <span th:text="${negotiationQueue == 1} ? 'request requires' : 'requests require'"></span>
+            your attention. <a th:href="@{/admin/queue}" class="fw-bold">Review Queue</a>
+        </span>
     </div>
 
     <!-- Claims Stats -->

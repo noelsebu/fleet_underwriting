@@ -15,4 +15,6 @@ public interface UnderwritingRecordRepository extends JpaRepository<Underwriting
 
     @Query("SELECT COALESCE(SUM(r.annualPremium), 0) FROM UnderwritingRecord r WHERE r.workflowStatus = 'POLICY_ISSUED'")
     BigDecimal sumAnnualPremiumForIssuedPolicies();
+
+    java.util.Optional<UnderwritingRecord> findByPolicyNumber(String policyNumber);
 }

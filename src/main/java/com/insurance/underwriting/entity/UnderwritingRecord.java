@@ -53,6 +53,9 @@ public class UnderwritingRecord {
     // Admin comment (set on rejection)
     private String adminComment;
 
+    // Premium negotiation
+    private BigDecimal negotiatedPremium;
+
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "record_decision_factors", joinColumns = @JoinColumn(name = "record_id"))
     @Column(name = "factor")

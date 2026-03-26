@@ -45,7 +45,7 @@ class PolicyLookupControllerTest {
         mvc.perform(get("/policy/check").param("reference", "CUST-2025-0010"))
            .andExpect(status().isOk())
            .andExpect(view().name("policy-detail"))
-           .andExpect(model().attributeExists("record"));
+           .andExpect(model().attributeExists("record", "coverageLimit", "approvedClaimsTotal"));
     }
 
     @Test

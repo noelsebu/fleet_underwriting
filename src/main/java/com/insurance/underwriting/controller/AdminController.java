@@ -9,6 +9,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -43,7 +44,9 @@ public class AdminController {
         List<PolicyClaim> recentClaims = claimRepository.findAllByOrderBySubmittedAtDesc()
                 .stream().limit(5).toList();
 
-        var totalRevenue = recordRepository.sumAnnualPremiumForIssuedPolicies();
+        var totalRevenue      = recordRepository.sumAnnualPremiumForIssuedPolicies();
+        var totalClaimsPaid   = claimRepository.sumAllApprovedClaimAmounts();
+        long negotiationQueue = recordRepository.findByWorkflowStatusOrderBySubmittedAtDesc("NEGOTIATION_REQUESTED").size();
 
         model.addAttribute("totalSubmissions",  totalSubmissions);
         model.addAttribute("pendingReview",     pendingReview);
@@ -51,6 +54,8 @@ public class AdminController {
         model.addAttribute("rejected",          rejected);
         model.addAttribute("pendingAcceptance", pendingAcceptance);
         model.addAttribute("totalRevenue",      totalRevenue);
+        model.addAttribute("totalClaimsPaid",   totalClaimsPaid);
+        model.addAttribute("negotiationQueue",  negotiationQueue);
         model.addAttribute("totalClaims",       totalClaims);
         model.addAttribute("claimsPending",     claimsPending);
         model.addAttribute("claimsApproved",    claimsApproved);
@@ -65,7 +70,21 @@ public class AdminController {
     public String queue(Model model) {
         model.addAttribute("records",
                 recordRepository.findByWorkflowStatusOrderBySubmittedAtDesc("PENDING_ADMIN_REVIEW"));
+        model.addAttribute("negotiations",
+                recordRepository.findByWorkflowStatusOrderBySubmittedAtDesc("NEGOTIATION_REQUESTED"));
         return "admin/queue";
+    }
+
+    /** Admin sets a negotiated premium for a customer's request. */
+    @PostMapping("/set-premium/{id}")
+    public String setPremium(@PathVariable Long id,
+                             @RequestParam BigDecimal negotiatedPremium) {
+        UnderwritingRecord record = recordRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Record not found: " + id));
+        record.setNegotiatedPremium(negotiatedPremium);
+        record.setWorkflowStatus("NEGOTIATION_OFFERED");
+        recordRepository.save(record);
+        return "redirect:/admin/queue";
     }
 
     @GetMapping("/all")
@@ -120,7 +139,27 @@ public class AdminController {
         claim.setStatus("APPROVED");
         claim.setAdminNote(adminNote);
         claimRepository.save(claim);
+
+        // Check if cumulative approved claims exceed the coverage limit for this policy
+        recordRepository.findByPolicyNumber(claim.getPolicyNumber()).ifPresent(policy -> {
+            BigDecimal totalApproved = claimRepository.sumApprovedAmountByPolicyNumber(claim.getPolicyNumber());
+            BigDecimal limit = coverageLimit(policy.getSelectedTier());
+            if (totalApproved.compareTo(limit) >= 0) {
+                policy.setExpiresAt(java.time.LocalDateTime.now());
+                recordRepository.save(policy);
+            }
+        });
+
         return "redirect:/admin/claims";
+    }
+
+    private static BigDecimal coverageLimit(String tier) {
+        if (tier == null) return new BigDecimal("10000");
+        switch (tier.toLowerCase()) {
+            case "premium": return new BigDecimal("15000");
+            case "diamond": return new BigDecimal("20000");
+            default:        return new BigDecimal("10000");
+        }
     }
 
     @PostMapping("/claims/reject/{id}")
