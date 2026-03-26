@@ -100,6 +100,24 @@
         </div>
     </div>
 
+    <!-- Revenue -->
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="stat-card" style="background: linear-gradient(135deg, #0f5132, #198754); color: white;">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="stat-icon" style="background: rgba(255,255,255,.2);">
+                        <i class="bi bi-currency-dollar" style="color: white;"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value" style="color: white;"
+                             th:text="'$' + ${#numbers.formatDecimal(totalRevenue, 1, 'COMMA', 2, 'POINT')}">$0.00</div>
+                        <div class="stat-label" style="color: rgba(255,255,255,.7);">Total Annual Premium Revenue (Active Policies)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Claims Stats -->
     <h6 class="section-title"><i class="bi bi-file-earmark-medical me-1"></i>Claims</h6>
     <div class="row g-3 mb-4">

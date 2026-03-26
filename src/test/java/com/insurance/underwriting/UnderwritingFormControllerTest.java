@@ -81,6 +81,36 @@ class UnderwritingFormControllerTest {
     }
 
     @Test
+    void submitForm_mediumRisk_setsHighRiskReviewStatus() throws Exception {
+        var result = mvc.perform(post("/underwriting").with(csrf())
+           .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+           .param("businessInfo.companyName", "MediumFleet Ltd")
+           .param("businessInfo.yearsInOperation", "3")
+           .param("businessInfo.creditScore", "620")
+           .param("businessInfo.warZone", "false")
+           .param("businessInfo.phoneNumber", "5550001111")
+           .param("businessInfo.email", "medium@fleet.com")
+           .param("fleetDetails.totalVehicles", "15")
+           .param("fleetDetails.averageVehicleAgeYears", "6.0")
+           .param("fleetDetails.primaryVehicleType", "TRUCK")
+           .param("driverPool.totalDrivers", "12")
+           .param("driverPool.averageDriverAge", "28.0")
+           .param("claimsHistory.claimsLast3Years", "4")
+           .param("claimsHistory.totalClaimAmount", "40000")
+           .param("claimsHistory.atFaultCount", "2")
+           .param("selectedTier", "Premium"))
+           .andExpect(status().is3xxRedirection())
+           .andReturn();
+
+        Long id = Long.parseLong(result.getResponse().getRedirectedUrl().replace("/underwriting/result/", ""));
+        UnderwritingRecord saved = repo.findById(id).orElseThrow();
+        // Both MEDIUM and HIGH skip straight to HIGH_RISK_REVIEW (manual review required)
+        assertThat(saved.getWorkflowStatus()).isEqualTo("HIGH_RISK_REVIEW");
+        assertThat(saved.getRiskCategory()).isNotEqualTo("LOW");
+        assertThat(saved.getTrackingNumber()).isNull();
+    }
+
+    @Test
     void submitForm_highRisk_setsHighRiskReviewStatus() throws Exception {
         var result = mvc.perform(post("/underwriting").with(csrf())
            .contentType(MediaType.APPLICATION_FORM_URLENCODED)
@@ -128,6 +158,28 @@ class UnderwritingFormControllerTest {
            .param("driverPool.averageDriverAge", "35.0")
            .param("claimsHistory.claimsLast3Years", "0")
            .param("claimsHistory.totalClaimAmount", "0")
+           .param("claimsHistory.atFaultCount", "0"))
+           .andExpect(status().isOk())
+           .andExpect(view().name("underwriting-form"))
+           .andExpect(model().hasErrors());
+    }
+
+    @Test
+    void submitForm_zeroClaimsWithNonZeroAmount_returnsFormWithErrors() throws Exception {
+        mvc.perform(post("/underwriting").with(csrf())
+           .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+           .param("businessInfo.companyName", "ZeroClaimsFleet")
+           .param("businessInfo.yearsInOperation", "5")
+           .param("businessInfo.creditScore", "700")
+           .param("businessInfo.phoneNumber", "1234567890")
+           .param("businessInfo.email", "zero@fleet.com")
+           .param("fleetDetails.totalVehicles", "10")
+           .param("fleetDetails.averageVehicleAgeYears", "3.0")
+           .param("fleetDetails.primaryVehicleType", "SEDAN")
+           .param("driverPool.totalDrivers", "8")
+           .param("driverPool.averageDriverAge", "35.0")
+           .param("claimsHistory.claimsLast3Years", "0")
+           .param("claimsHistory.totalClaimAmount", "5000")  // invalid: 0 claims but non-zero amount
            .param("claimsHistory.atFaultCount", "0"))
            .andExpect(status().isOk())
            .andExpect(view().name("underwriting-form"))

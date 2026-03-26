@@ -43,11 +43,14 @@ public class AdminController {
         List<PolicyClaim> recentClaims = claimRepository.findAllByOrderBySubmittedAtDesc()
                 .stream().limit(5).toList();
 
+        var totalRevenue = recordRepository.sumAnnualPremiumForIssuedPolicies();
+
         model.addAttribute("totalSubmissions",  totalSubmissions);
         model.addAttribute("pendingReview",     pendingReview);
         model.addAttribute("policiesIssued",    policiesIssued);
         model.addAttribute("rejected",          rejected);
         model.addAttribute("pendingAcceptance", pendingAcceptance);
+        model.addAttribute("totalRevenue",      totalRevenue);
         model.addAttribute("totalClaims",       totalClaims);
         model.addAttribute("claimsPending",     claimsPending);
         model.addAttribute("claimsApproved",    claimsApproved);

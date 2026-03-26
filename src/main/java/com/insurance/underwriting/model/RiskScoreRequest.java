@@ -87,5 +87,13 @@ public class RiskScoreRequest {
         public boolean isAtFaultCountValid() {
             return atFaultCount <= claimsLast3Years;
         }
+
+        @AssertTrue(message = "Total claim amount must be 0 when there are no claims")
+        public boolean isClaimAmountZeroIfNoClaimsValid() {
+            if (claimsLast3Years == 0) {
+                return totalClaimAmount == null || totalClaimAmount.compareTo(java.math.BigDecimal.ZERO) == 0;
+            }
+            return true;
+        }
     }
 }

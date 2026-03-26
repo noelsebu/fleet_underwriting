@@ -68,7 +68,7 @@ class AdminControllerTest {
            .andExpect(view().name("admin/dashboard"))
            .andExpect(model().attributeExists(
                    "totalSubmissions", "pendingReview", "policiesIssued",
-                   "rejected", "totalClaims", "claimsPending",
+                   "rejected", "totalRevenue", "totalClaims", "claimsPending",
                    "claimsApproved", "claimsRejected",
                    "recentSubmissions", "recentClaims"));
     }

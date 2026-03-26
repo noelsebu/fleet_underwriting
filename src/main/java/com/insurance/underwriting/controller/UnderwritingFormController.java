@@ -65,10 +65,8 @@ public class UnderwritingFormController {
         String workflowStatus;
         if ("LOW".equals(riskCat)) {
             workflowStatus = "PENDING_CUSTOMER_ACCEPTANCE";
-        } else if ("MEDIUM".equals(riskCat)) {
-            workflowStatus = "PENDING_ADMIN_REVIEW";
         } else {
-            // HIGH risk: user must explicitly request a policy review
+            // MEDIUM and HIGH risk: user must explicitly request a policy review
             workflowStatus = "HIGH_RISK_REVIEW";
         }
 

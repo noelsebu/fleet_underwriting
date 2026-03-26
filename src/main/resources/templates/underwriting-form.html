@@ -208,10 +208,12 @@
                 <div class="col-md-4">
                     <label class="form-label">Total Claim Amount ($)</label>
                     <input type="number" step="0.01" th:field="*{claimsHistory.totalClaimAmount}"
-                           th:classappend="${#fields.hasErrors('claimsHistory.totalClaimAmount')} ? 'is-invalid'"
+                           th:classappend="${#fields.hasErrors('claimsHistory.totalClaimAmount') or #fields.hasErrors('claimsHistory.claimAmountZeroIfNoClaimsValid')} ? 'is-invalid'"
                            class="form-control" min="0" placeholder="15000" />
                     <div class="invalid-feedback" th:if="${#fields.hasErrors('claimsHistory.totalClaimAmount')}"
                          th:errors="*{claimsHistory.totalClaimAmount}"></div>
+                    <div class="invalid-feedback" th:if="${#fields.hasErrors('claimsHistory.claimAmountZeroIfNoClaimsValid')}"
+                         th:errors="*{claimsHistory.claimAmountZeroIfNoClaimsValid}"></div>
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">At-Fault Claims</label>
