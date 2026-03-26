@@ -69,7 +69,6 @@ public class UnderwritingFormController {
         UnderwritingRecord record = UnderwritingRecord.builder()
                 .companyName(request.getBusinessInfo().getCompanyName())
                 .phoneNumber(request.getBusinessInfo().getPhoneNumber())
-                .phoneExtension(request.getBusinessInfo().getPhoneExtension())
                 .selectedTier(selectedTier)
                 .submittedAt(LocalDateTime.now())
                 .riskScore(response.getRiskScore())
