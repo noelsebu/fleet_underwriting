@@ -34,7 +34,12 @@
     <a th:href="@{/admin/queue}"><i class="bi bi-inbox"></i> Review Queue</a>
     <a th:href="@{/admin/all}" class="active"><i class="bi bi-list-ul"></i> All Submissions</a>
     <a th:href="@{/admin/claims}"><i class="bi bi-file-earmark-medical"></i> Claims</a>
-    <a th:href="@{/admin/logout}" style="position:absolute; bottom:20px; width:100%;"><i class="bi bi-box-arrow-left"></i> Logout</a>
+    <form th:action="@{/admin/logout}" method="post" style="position:absolute; bottom:20px; width:100%;">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+        <button type="submit" style="display:flex; align-items:center; gap:10px; width:100%; background:none; border:none; color:rgba(255,255,255,.7); padding:12px 20px; font-size:.92rem; cursor:pointer;" onmouseover="this.style.background='rgba(255,255,255,.1)';this.style.color='white'" onmouseout="this.style.background='none';this.style.color='rgba(255,255,255,.7)'">
+            <i class="bi bi-box-arrow-left"></i> Logout
+        </button>
+    </form>
 </div>
 
 <div class="main">
