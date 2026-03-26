@@ -52,6 +52,17 @@ public class ClaimController {
 
         UnderwritingRecord policy = record.get();
 
+        boolean hasPendingClaim = claimRepository
+                .findByCustomerIdOrPolicyNumber(policy.getCustomerId(), policy.getPolicyNumber())
+                .stream()
+                .anyMatch(c -> "PENDING_REVIEW".equals(c.getStatus()));
+
+        if (hasPendingClaim) {
+            model.addAttribute("error", "A claim for policy " + policy.getPolicyNumber()
+                    + " is already under review. You may not submit another claim until the current one has been resolved.");
+            return "claim-form";
+        }
+
         PolicyClaim claim = PolicyClaim.builder()
                 .customerId(policy.getCustomerId())
                 .policyNumber(policy.getPolicyNumber())

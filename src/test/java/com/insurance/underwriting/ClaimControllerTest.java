@@ -13,6 +13,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -171,6 +172,63 @@ class ClaimControllerTest {
            .andExpect(model().attribute("claim",
                    org.hamcrest.Matchers.hasProperty("claimAmount",
                            org.hamcrest.Matchers.comparesEqualTo(new BigDecimal("22000")))));
+    }
+
+    // ── Duplicate claim prevention ────────────────────────────────────────────
+
+    @Test
+    void submitClaim_whenPendingClaimExists_returnsFormWithError() throws Exception {
+        issuedPolicy("CUST-2025-0110", "Pol-2025-110");
+
+        // First claim — should succeed
+        mvc.perform(post("/claim/submit").with(csrf())
+           .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+           .param("reference", "Pol-2025-110")
+           .param("incidentDescription", "First incident.")
+           .param("claimAmount", "3000")
+           .param("incidentDate", "2025-06-01")
+           .param("atFault", "false"))
+           .andExpect(view().name("claim-submitted"));
+
+        // Second claim — should be blocked while first is PENDING_REVIEW
+        mvc.perform(post("/claim/submit").with(csrf())
+           .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+           .param("reference", "Pol-2025-110")
+           .param("incidentDescription", "Second incident.")
+           .param("claimAmount", "1500")
+           .param("incidentDate", "2025-07-01")
+           .param("atFault", "false"))
+           .andExpect(status().isOk())
+           .andExpect(view().name("claim-form"))
+           .andExpect(model().attributeExists("error"));
+    }
+
+    @Test
+    void submitClaim_afterApprovedClaim_isAllowed() throws Exception {
+        issuedPolicy("CUST-2025-0111", "Pol-2025-111");
+
+        // Save an already-resolved (APPROVED) claim — should not block new submission
+        claimRepo.save(PolicyClaim.builder()
+                .customerId("CUST-2025-0111")
+                .policyNumber("Pol-2025-111")
+                .companyName("TestFleet")
+                .selectedTier("Basic")
+                .incidentDescription("Old resolved incident.")
+                .claimAmount(new BigDecimal("2000"))
+                .incidentDate(LocalDate.now().minusDays(30))
+                .atFault(false)
+                .status("APPROVED")
+                .submittedAt(LocalDateTime.now().minusDays(30))
+                .build());
+
+        mvc.perform(post("/claim/submit").with(csrf())
+           .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+           .param("reference", "Pol-2025-111")
+           .param("incidentDescription", "New incident after approval.")
+           .param("claimAmount", "4000")
+           .param("incidentDate", "2025-08-01")
+           .param("atFault", "false"))
+           .andExpect(view().name("claim-submitted"));
     }
 
     // ── helper ────────────────────────────────────────────────────────────────
