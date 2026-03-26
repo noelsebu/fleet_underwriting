@@ -35,6 +35,7 @@ public class PolicyClaim {
     // PENDING_REVIEW | APPROVED | REJECTED
     private String status;
     private String adminNote;
+    private BigDecimal approvedAmount;  // set by admin on approval
 
     private LocalDateTime submittedAt;
 }

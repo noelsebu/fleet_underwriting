@@ -198,17 +198,19 @@ class AdminControllerTest {
 
     @Test
     @WithMockUser(username = "admin", authorities = "ROLE_ADMIN")
-    void approveClaim_setsStatusToApproved() throws Exception {
+    void approveClaim_setsStatusAndApprovedAmount() throws Exception {
         PolicyClaim claim = claimRepo.save(pendingClaim("CUST-2025-0001", "Pol-2025-1", "PENDING_REVIEW"));
 
         mvc.perform(post("/admin/claims/approve/" + claim.getId())
            .with(csrf())
+           .param("approvedAmount", "2000.00")
            .param("adminNote", "Claim verified, approved."))
            .andExpect(status().is3xxRedirection())
            .andExpect(redirectedUrl("/admin/claims"));
 
         PolicyClaim updated = claimRepo.findById(claim.getId()).orElseThrow();
         assertThat(updated.getStatus()).isEqualTo("APPROVED");
+        assertThat(updated.getApprovedAmount()).isEqualByComparingTo("2000.00");
         assertThat(updated.getAdminNote()).isEqualTo("Claim verified, approved.");
     }
 
@@ -217,7 +219,9 @@ class AdminControllerTest {
     void approveClaim_withoutNote_stillApproves() throws Exception {
         PolicyClaim claim = claimRepo.save(pendingClaim("CUST-2025-0003", "Pol-2025-3", "PENDING_REVIEW"));
 
-        mvc.perform(post("/admin/claims/approve/" + claim.getId()).with(csrf()))
+        mvc.perform(post("/admin/claims/approve/" + claim.getId())
+           .with(csrf())
+           .param("approvedAmount", "2500.00"))
            .andExpect(status().is3xxRedirection());
 
         assertThat(claimRepo.findById(claim.getId()).orElseThrow().getStatus()).isEqualTo("APPROVED");
@@ -296,7 +300,8 @@ class AdminControllerTest {
                 .submittedAt(java.time.LocalDateTime.now())
                 .build());
 
-        mvc.perform(post("/admin/claims/approve/" + claim.getId()).with(csrf()))
+        mvc.perform(post("/admin/claims/approve/" + claim.getId()).with(csrf())
+           .param("approvedAmount", "11000.00"))
            .andExpect(status().is3xxRedirection());
 
         UnderwritingRecord updated = recordRepo.findById(policy.getId()).orElseThrow();
@@ -338,9 +343,8 @@ class AdminControllerTest {
                 .submittedAt(java.time.LocalDateTime.now())
                 .build());
 
-        java.time.LocalDateTime originalExpiry = policy.getExpiresAt();
-
-        mvc.perform(post("/admin/claims/approve/" + claim.getId()).with(csrf()))
+        mvc.perform(post("/admin/claims/approve/" + claim.getId()).with(csrf())
+           .param("approvedAmount", "2000.00"))
            .andExpect(status().is3xxRedirection());
 
         UnderwritingRecord updated = recordRepo.findById(policy.getId()).orElseThrow();

@@ -14,9 +14,9 @@ public interface PolicyClaimRepository extends JpaRepository<PolicyClaim, Long> 
     List<PolicyClaim> findByCustomerIdOrPolicyNumber(String customerId, String policyNumber);
     long countByStatus(String status);
 
-    @Query("SELECT COALESCE(SUM(c.claimAmount), 0) FROM PolicyClaim c WHERE c.policyNumber = :policyNumber AND c.status = 'APPROVED'")
+    @Query("SELECT COALESCE(SUM(c.approvedAmount), 0) FROM PolicyClaim c WHERE c.policyNumber = :policyNumber AND c.status = 'APPROVED'")
     BigDecimal sumApprovedAmountByPolicyNumber(@Param("policyNumber") String policyNumber);
 
-    @Query("SELECT COALESCE(SUM(c.claimAmount), 0) FROM PolicyClaim c WHERE c.status = 'APPROVED'")
+    @Query("SELECT COALESCE(SUM(c.approvedAmount), 0) FROM PolicyClaim c WHERE c.status = 'APPROVED'")
     BigDecimal sumAllApprovedClaimAmounts();
 }

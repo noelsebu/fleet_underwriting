@@ -175,7 +175,10 @@
                         <div class="text-end ms-3 flex-shrink-0">
                             <div class="fw-bold" style="font-size:1.05rem; color:#1b3a5c;"
                                  th:text="'$' + ${c.claimAmount}"></div>
-                            <div class="text-muted" style="font-size:.78rem;">claim amount</div>
+                            <div class="text-muted" style="font-size:.78rem;">requested</div>
+                            <div th:if="${c.approvedAmount != null}" class="fw-bold text-success mt-1"
+                                 style="font-size:.95rem;" th:text="'$' + ${c.approvedAmount}"></div>
+                            <div th:if="${c.approvedAmount != null}" class="text-success" style="font-size:.72rem;">approved</div>
                         </div>
                     </div>
                 </div>

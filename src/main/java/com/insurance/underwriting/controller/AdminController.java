@@ -133,10 +133,12 @@ public class AdminController {
 
     @PostMapping("/claims/approve/{id}")
     public String approveClaim(@PathVariable Long id,
+                               @RequestParam BigDecimal approvedAmount,
                                @RequestParam(required = false) String adminNote) {
         PolicyClaim claim = claimRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Claim not found: " + id));
         claim.setStatus("APPROVED");
+        claim.setApprovedAmount(approvedAmount);
         claim.setAdminNote(adminNote);
         claimRepository.save(claim);
 
