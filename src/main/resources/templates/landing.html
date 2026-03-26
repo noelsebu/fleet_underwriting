@@ -83,20 +83,27 @@
 </head>
 <body>
 
+<!-- Top Nav -->
+<nav style="background:#0d1b2a; padding:10px 24px; display:flex; align-items:center; justify-content:space-between;">
+    <a th:href="@{/admin/login}" class="btn btn-outline-light btn-sm">
+        <i class="bi bi-shield-lock me-1"></i> Admin Login
+    </a>
+    <div class="d-flex gap-2">
+        <a th:href="@{/policy/lookup}" class="btn btn-outline-light btn-sm">
+            <i class="bi bi-search me-1"></i> Check My Policy
+        </a>
+        <a th:href="@{/claim/new}" class="btn btn-warning btn-sm fw-semibold">
+            <i class="bi bi-file-earmark-plus me-1"></i> File a Claim
+        </a>
+    </div>
+</nav>
+
 <!-- Hero -->
 <div class="hero">
     <div class="container">
         <div class="mb-3"><i class="bi bi-shield-check" style="font-size:3rem; color:#4dabf7;"></i></div>
         <h1>FleetGuard Insurance</h1>
         <p>Smart fleet underwriting — get a personalised quote in minutes based on your fleet's risk profile.</p>
-        <div class="d-flex gap-2 justify-content-center mt-3">
-            <a th:href="@{/policy/lookup}" class="btn btn-outline-light btn-sm">
-                <i class="bi bi-search"></i> Check My Policy
-            </a>
-            <a th:href="@{/admin/login}" class="btn btn-outline-light btn-sm">
-                <i class="bi bi-shield-lock"></i> Admin Login
-            </a>
-        </div>
     </div>
 </div>
 

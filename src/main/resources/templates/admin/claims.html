@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>FleetGuard — Claims Queue</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body { background: #f0f4f8; }
+        .sidebar { background: linear-gradient(180deg, #0d1b2a, #1b3a5c); min-height: 100vh;
+                   width: 220px; position: fixed; top: 0; left: 0; padding: 24px 0; }
+        .sidebar .brand { color: white; font-weight: 700; font-size: 1.1rem; padding: 0 20px 24px; border-bottom: 1px solid rgba(255,255,255,.1); }
+        .sidebar a { display: flex; align-items: center; gap: 10px; color: rgba(255,255,255,.7);
+                     text-decoration: none; padding: 12px 20px; font-size: .92rem; transition: background .15s; }
+        .sidebar a:hover, .sidebar a.active { background: rgba(255,255,255,.1); color: white; }
+        .main { margin-left: 220px; padding: 32px; }
+        .card { border: none; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,.06); }
+    </style>
+</head>
+<body>
+
+<div class="sidebar">
+    <div class="brand"><i class="bi bi-shield-check me-2"></i>FleetGuard Admin</div>
+    <a th:href="@{/admin/dashboard}"><i class="bi bi-speedometer2"></i> Dashboard</a>
+    <a th:href="@{/admin/queue}"><i class="bi bi-inbox"></i> Review Queue</a>
+    <a th:href="@{/admin/all}"><i class="bi bi-list-ul"></i> All Submissions</a>
+    <a th:href="@{/admin/claims}" class="active"><i class="bi bi-file-earmark-medical"></i> Claims</a>
+    <a th:href="@{/admin/logout}" style="margin-top:auto; position:absolute; bottom:20px; width:100%;"><i class="bi bi-box-arrow-left"></i> Logout</a>
+</div>
+
+<div class="main">
+    <h2 class="fw-bold mb-1" style="color:#1b3a5c;">Claims Queue</h2>
+    <p class="text-muted mb-4">Policy claims pending review and decision.</p>
+
+    <div th:if="${#lists.isEmpty(claims)}" class="alert alert-success">
+        <i class="bi bi-check-circle-fill me-2"></i>No pending claims — queue is clear.
+    </div>
+
+    <div th:if="${!#lists.isEmpty(claims)}" class="card">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Customer ID</th>
+                        <th>Policy No.</th>
+                        <th>Company</th>
+                        <th>Tier</th>
+                        <th>Incident Date</th>
+                        <th>Amount</th>
+                        <th>At Fault</th>
+                        <th>Description</th>
+                        <th>Submitted</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="c : ${claims}">
+                        <td class="fw-semibold" th:text="${c.customerId}"></td>
+                        <td th:text="${c.policyNumber}"></td>
+                        <td th:text="${c.companyName}"></td>
+                        <td th:text="${c.selectedTier}"></td>
+                        <td th:text="${#temporals.format(c.incidentDate, 'dd MMM yyyy')}"></td>
+                        <td th:text="'$' + ${c.claimAmount}"></td>
+                        <td>
+                            <span th:if="${c.atFault}" class="badge bg-danger">Yes</span>
+                            <span th:unless="${c.atFault}" class="badge bg-secondary">No</span>
+                        </td>
+                        <td style="max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"
+                            th:text="${c.incidentDescription}" th:title="${c.incidentDescription}"></td>
+                        <td th:text="${#temporals.format(c.submittedAt, 'dd MMM HH:mm')}"></td>
+                        <td>
+                            <button type="button" class="btn btn-success btn-sm"
+                                    data-bs-toggle="modal" th:data-bs-target="'#approveModal' + ${c.id}">
+                                <i class="bi bi-check-lg"></i> Approve
+                            </button>
+                            <button type="button" class="btn btn-danger btn-sm ms-1"
+                                    data-bs-toggle="modal" th:data-bs-target="'#rejectModal' + ${c.id}">
+                                <i class="bi bi-x-lg"></i> Reject
+                            </button>
+
+                            <!-- Approve Modal -->
+                            <div class="modal fade" th:id="'approveModal' + ${c.id}" tabindex="-1">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title text-success"><i class="bi bi-check-circle me-2"></i>Approve Claim</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <form th:action="@{/admin/claims/approve/{id}(id=${c.id})}" method="post">
+                                            <div class="modal-body">
+                                                <p class="text-muted small">Claim from <strong th:text="${c.companyName}"></strong> for <strong th:text="'$' + ${c.claimAmount}"></strong></p>
+                                                <div class="mb-3">
+                                                    <label class="form-label">Admin Note (optional)</label>
+                                                    <textarea name="adminNote" class="form-control" rows="3" placeholder="Add a note for the customer..."></textarea>
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                <button type="submit" class="btn btn-success">Approve Claim</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Reject Modal -->
+                            <div class="modal fade" th:id="'rejectModal' + ${c.id}" tabindex="-1">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title text-danger"><i class="bi bi-x-circle me-2"></i>Reject Claim</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <form th:action="@{/admin/claims/reject/{id}(id=${c.id})}" method="post">
+                                            <div class="modal-body">
+                                                <p class="text-muted small">Claim from <strong th:text="${c.companyName}"></strong> for <strong th:text="'$' + ${c.claimAmount}"></strong></p>
+                                                <div class="mb-3">
+                                                    <label class="form-label">Reason for Rejection</label>
+                                                    <textarea name="adminNote" class="form-control" rows="3" placeholder="Explain why this claim is being rejected..."></textarea>
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                <button type="submit" class="btn btn-danger">Reject Claim</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

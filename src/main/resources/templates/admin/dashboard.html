@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>FleetGuard — Admin Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body { background: #f0f4f8; }
+        .sidebar { background: linear-gradient(180deg, #0d1b2a, #1b3a5c); min-height: 100vh;
+                   width: 220px; position: fixed; top: 0; left: 0; padding: 24px 0; }
+        .sidebar .brand { color: white; font-weight: 700; font-size: 1.1rem; padding: 0 20px 24px; border-bottom: 1px solid rgba(255,255,255,.1); }
+        .sidebar a { display: flex; align-items: center; gap: 10px; color: rgba(255,255,255,.7);
+                     text-decoration: none; padding: 12px 20px; font-size: .92rem; transition: background .15s; }
+        .sidebar a:hover, .sidebar a.active { background: rgba(255,255,255,.1); color: white; }
+        .main { margin-left: 220px; padding: 32px; }
+        .stat-card { border: none; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,.06); padding: 20px 24px; }
+        .stat-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; }
+        .stat-value { font-size: 2rem; font-weight: 800; color: #1a1a2e; line-height: 1.1; }
+        .stat-label { font-size: .82rem; color: #888; text-transform: uppercase; letter-spacing: .5px; margin-top: 4px; }
+        .card { border: none; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,.06); }
+        .section-title { font-size: 1rem; font-weight: 700; color: #1b3a5c; margin-bottom: 16px; }
+    </style>
+</head>
+<body>
+
+<div class="sidebar">
+    <div class="brand"><i class="bi bi-shield-check me-2"></i>FleetGuard Admin</div>
+    <a th:href="@{/admin/dashboard}" class="active"><i class="bi bi-speedometer2"></i> Dashboard</a>
+    <a th:href="@{/admin/queue}"><i class="bi bi-inbox"></i> Review Queue</a>
+    <a th:href="@{/admin/all}"><i class="bi bi-list-ul"></i> All Submissions</a>
+    <a th:href="@{/admin/claims}"><i class="bi bi-file-earmark-medical"></i> Claims</a>
+    <a th:href="@{/admin/logout}" style="margin-top:auto; position:absolute; bottom:20px; width:100%;"><i class="bi bi-box-arrow-left"></i> Logout</a>
+</div>
+
+<div class="main">
+    <h2 class="fw-bold mb-1" style="color:#1b3a5c;">Dashboard</h2>
+    <p class="text-muted mb-4">Overview of underwriting submissions and policy claims.</p>
+
+    <!-- Underwriting Stats -->
+    <h6 class="section-title"><i class="bi bi-clipboard-data me-1"></i>Underwriting</h6>
+    <div class="row g-3 mb-4">
+        <div class="col-md-3 col-sm-6">
+            <div class="stat-card bg-white">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="stat-icon bg-primary bg-opacity-10">
+                        <i class="bi bi-file-earmark-text text-primary"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value" th:text="${totalSubmissions}">0</div>
+                        <div class="stat-label">Total Submissions</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="stat-card bg-white">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="stat-icon bg-warning bg-opacity-10">
+                        <i class="bi bi-hourglass-split text-warning"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value" th:text="${pendingReview}">0</div>
+                        <div class="stat-label">Pending Review</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="stat-card bg-white">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="stat-icon bg-success bg-opacity-10">
+                        <i class="bi bi-shield-check text-success"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value" th:text="${policiesIssued}">0</div>
+                        <div class="stat-label">Policies Issued</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="stat-card bg-white">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="stat-icon bg-danger bg-opacity-10">
+                        <i class="bi bi-x-circle text-danger"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value" th:text="${rejected}">0</div>
+                        <div class="stat-label">Rejected</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Claims Stats -->
+    <h6 class="section-title"><i class="bi bi-file-earmark-medical me-1"></i>Claims</h6>
+    <div class="row g-3 mb-4">
+        <div class="col-md-3 col-sm-6">
+            <div class="stat-card bg-white">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="stat-icon bg-secondary bg-opacity-10">
+                        <i class="bi bi-folder2-open text-secondary"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value" th:text="${totalClaims}">0</div>
+                        <div class="stat-label">Total Claims</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="stat-card bg-white">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="stat-icon bg-warning bg-opacity-10">
+                        <i class="bi bi-clock text-warning"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value" th:text="${claimsPending}">0</div>
+                        <div class="stat-label">Pending Review</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="stat-card bg-white">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="stat-icon bg-success bg-opacity-10">
+                        <i class="bi bi-check-circle text-success"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value" th:text="${claimsApproved}">0</div>
+                        <div class="stat-label">Approved</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="stat-card bg-white">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="stat-icon bg-danger bg-opacity-10">
+                        <i class="bi bi-x-circle text-danger"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value" th:text="${claimsRejected}">0</div>
+                        <div class="stat-label">Rejected</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Recent Submissions -->
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-body p-0">
+                    <div class="d-flex align-items-center justify-content-between p-3 border-bottom">
+                        <h6 class="fw-bold mb-0" style="color:#1b3a5c;"><i class="bi bi-clock-history me-1"></i>Recent Submissions</h6>
+                        <a th:href="@{/admin/queue}" class="btn btn-outline-primary btn-sm">View Queue</a>
+                    </div>
+                    <div th:if="${#lists.isEmpty(recentSubmissions)}" class="p-3 text-muted text-center small">No submissions yet.</div>
+                    <ul class="list-group list-group-flush" th:if="${!#lists.isEmpty(recentSubmissions)}">
+                        <li class="list-group-item d-flex justify-content-between align-items-center py-3"
+                            th:each="r : ${recentSubmissions}">
+                            <div>
+                                <div class="fw-semibold" th:text="${r.companyName}"></div>
+                                <small class="text-muted" th:text="${r.selectedTier} + ' · ' + ${#temporals.format(r.submittedAt, 'dd MMM HH:mm')}"></small>
+                            </div>
+                            <span class="badge rounded-pill"
+                                  th:classappend="${r.workflowStatus == 'POLICY_ISSUED'} ? 'bg-success' :
+                                                  (${r.workflowStatus == 'REJECTED'} ? 'bg-danger' :
+                                                  (${r.workflowStatus == 'PENDING_ADMIN_REVIEW'} ? 'bg-warning text-dark' : 'bg-secondary'))"
+                                  th:text="${r.workflowStatus.replace('_', ' ')}"></span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Claims -->
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-body p-0">
+                    <div class="d-flex align-items-center justify-content-between p-3 border-bottom">
+                        <h6 class="fw-bold mb-0" style="color:#1b3a5c;"><i class="bi bi-file-earmark-medical me-1"></i>Recent Claims</h6>
+                        <a th:href="@{/admin/claims}" class="btn btn-outline-primary btn-sm">View Claims</a>
+                    </div>
+                    <div th:if="${#lists.isEmpty(recentClaims)}" class="p-3 text-muted text-center small">No claims yet.</div>
+                    <ul class="list-group list-group-flush" th:if="${!#lists.isEmpty(recentClaims)}">
+                        <li class="list-group-item d-flex justify-content-between align-items-center py-3"
+                            th:each="c : ${recentClaims}">
+                            <div>
+                                <div class="fw-semibold" th:text="${c.companyName}"></div>
+                                <small class="text-muted" th:text="'$' + ${c.claimAmount} + ' · ' + ${#temporals.format(c.submittedAt, 'dd MMM HH:mm')}"></small>
+                            </div>
+                            <span class="badge rounded-pill"
+                                  th:classappend="${c.status == 'APPROVED'} ? 'bg-success' :
+                                                  (${c.status == 'REJECTED'} ? 'bg-danger' : 'bg-warning text-dark')"
+                                  th:text="${c.status.replace('_', ' ')}"></span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
