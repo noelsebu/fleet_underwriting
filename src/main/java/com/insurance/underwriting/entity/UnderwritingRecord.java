@@ -26,6 +26,7 @@ public class UnderwritingRecord {
 
     private String companyName;
     private String phoneNumber;
+    private String email;
     private String phoneExtension;
     private String selectedTier;
     private LocalDateTime submittedAt;
@@ -43,6 +44,14 @@ public class UnderwritingRecord {
     private String policyNumber;
     private String customerId;
     private BigDecimal annualPremium;
+    private LocalDateTime issuedAt;
+    private LocalDateTime expiresAt;
+
+    // High-risk request tracking
+    private String trackingNumber;
+
+    // Admin comment (set on rejection)
+    private String adminComment;
 
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "record_decision_factors", joinColumns = @JoinColumn(name = "record_id"))

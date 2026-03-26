@@ -34,6 +34,10 @@ public class RiskScoreRequest {
         @Pattern(regexp = "^\\+?[0-9]{7,15}$", message = "Enter a valid phone number (7–15 digits, optional + prefix)")
         private String phoneNumber;
 
+        @NotBlank(message = "Email address is required")
+        @Email(message = "Enter a valid email address")
+        private String email;
+
         @Min(value = 0, message = "Years in operation cannot be negative")
         private int yearsInOperation;
 

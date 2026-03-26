@@ -18,6 +18,8 @@
         .badge-MEDIUM { background: #fff3cd; color: #664d03; }
         .badge-HIGH   { background: #f8d7da; color: #842029; }
         .card { border: none; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,.06); }
+        .tracking-badge { font-family: monospace; font-size: .8rem; background: #fff8e1;
+                          color: #856404; border: 1px solid #ffe082; border-radius: 6px; padding: 2px 8px; }
     </style>
 </head>
 <body>
@@ -28,9 +30,9 @@
     <a th:href="@{/admin/queue}" class="active"><i class="bi bi-inbox"></i> Review Queue</a>
     <a th:href="@{/admin/all}"><i class="bi bi-list-ul"></i> All Submissions</a>
     <a th:href="@{/admin/claims}"><i class="bi bi-file-earmark-medical"></i> Claims</a>
-    <form th:action="@{/admin/logout}" method="post" style="position:absolute; bottom:20px; width:100%; padding:0 0;">
+    <form th:action="@{/admin/logout}" method="post" style="position:absolute; bottom:20px; width:100%;">
         <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-        <button type="submit" style="display:flex; align-items:center; gap:10px; width:100%; background:none; border:none; color:rgba(255,255,255,.7); padding:12px 20px; font-size:.92rem; cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(255,255,255,.1)';this.style.color='white'" onmouseout="this.style.background='none';this.style.color='rgba(255,255,255,.7)'">
+        <button type="submit" style="display:flex; align-items:center; gap:10px; width:100%; background:none; border:none; color:rgba(255,255,255,.7); padding:12px 20px; font-size:.92rem; cursor:pointer;" onmouseover="this.style.background='rgba(255,255,255,.1)';this.style.color='white'" onmouseout="this.style.background='none';this.style.color='rgba(255,255,255,.7)'">
             <i class="bi bi-box-arrow-left"></i> Logout
         </button>
     </form>
@@ -46,15 +48,15 @@
 
     <div th:if="${!#lists.isEmpty(records)}" class="card">
         <div class="table-responsive">
-            <table class="table table-hover mb-0">
+            <table class="table table-hover mb-0 align-middle">
                 <thead class="table-dark">
                     <tr>
                         <th>Company</th>
-                        <th>Phone</th>
+                        <th>Contact</th>
                         <th>Tier</th>
-                        <th>Risk Score</th>
-                        <th>Category</th>
-                        <th>Annual Premium</th>
+                        <th>Risk</th>
+                        <th>Premium</th>
+                        <th>Tracking #</th>
                         <th>Submitted</th>
                         <th>Actions</th>
                     </tr>
@@ -63,30 +65,73 @@
                     <tr th:each="r : ${records}">
                         <td class="fw-semibold" th:text="${r.companyName}"></td>
                         <td>
-                            <span th:text="${r.phoneNumber}"></span>
-                            <small th:if="${r.phoneExtension != null and !r.phoneExtension.isEmpty()}"
-                                   class="text-muted" th:text="' ext. ' + ${r.phoneExtension}"></small>
+                            <div th:text="${r.phoneNumber}" style="font-size:.9rem;"></div>
+                            <div th:text="${r.email}" class="text-muted" style="font-size:.8rem;"></div>
                         </td>
                         <td th:text="${r.selectedTier}"></td>
-                        <td th:text="${r.riskScore}"></td>
                         <td>
                             <span class="badge rounded-pill"
                                   th:classappend="'badge-' + ${r.riskCategory}"
                                   th:text="${r.riskCategory}"></span>
+                            <div class="text-muted small" th:text="${r.riskScore}"></div>
                         </td>
                         <td th:text="'$' + ${r.annualPremium}"></td>
+                        <td>
+                            <span th:if="${r.trackingNumber != null}" class="tracking-badge"
+                                  th:text="${r.trackingNumber}"></span>
+                            <span th:unless="${r.trackingNumber != null}" class="text-muted small">—</span>
+                        </td>
                         <td th:text="${#temporals.format(r.submittedAt, 'dd MMM yyyy HH:mm')}"></td>
                         <td>
+                            <!-- Approve -->
                             <form th:action="@{/admin/approve/{id}(id=${r.id})}" method="post" class="d-inline">
+                                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
                                 <button type="submit" class="btn btn-success btn-sm">
                                     <i class="bi bi-check-lg"></i> Approve
                                 </button>
                             </form>
-                            <form th:action="@{/admin/reject/{id}(id=${r.id})}" method="post" class="d-inline ms-1">
-                                <button type="submit" class="btn btn-danger btn-sm">
-                                    <i class="bi bi-x-lg"></i> Reject
-                                </button>
-                            </form>
+                            <!-- Reject: opens modal -->
+                            <button type="button" class="btn btn-danger btn-sm ms-1"
+                                    data-bs-toggle="modal"
+                                    th:data-bs-target="'#rejectModal' + ${r.id}">
+                                <i class="bi bi-x-lg"></i> Reject
+                            </button>
+
+                            <!-- Reject Modal -->
+                            <div class="modal fade" th:id="'rejectModal' + ${r.id}" tabindex="-1">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title text-danger">
+                                                <i class="bi bi-x-circle me-2"></i>Reject Application
+                                            </h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <form th:action="@{/admin/reject/{id}(id=${r.id})}" method="post">
+                                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                                            <div class="modal-body">
+                                                <p class="text-muted small mb-3">
+                                                    Rejecting application from <strong th:text="${r.companyName}"></strong>.
+                                                    <span th:if="${r.email != null}">
+                                                        A notification will be associated with
+                                                        <strong th:text="${r.email}"></strong>.
+                                                    </span>
+                                                </p>
+                                                <div class="mb-3">
+                                                    <label class="form-label fw-semibold">Reason / Comment <span class="text-muted fw-normal">(recommended)</span></label>
+                                                    <textarea name="adminComment" class="form-control" rows="4"
+                                                              placeholder="e.g. High at-fault claims ratio exceeds acceptable underwriting thresholds. Please address driver training before reapplying."></textarea>
+                                                    <div class="form-text">This comment will be visible to the applicant on their result page.</div>
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                <button type="submit" class="btn btn-danger">Confirm Rejection</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
                         </td>
                     </tr>
                 </tbody>

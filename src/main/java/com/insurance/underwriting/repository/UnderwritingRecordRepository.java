@@ -9,4 +9,5 @@ public interface UnderwritingRecordRepository extends JpaRepository<Underwriting
     List<UnderwritingRecord> findAllByOrderBySubmittedAtDesc();
     List<UnderwritingRecord> findByWorkflowStatusOrderBySubmittedAtDesc(String workflowStatus);
     List<UnderwritingRecord> findByCustomerIdAndWorkflowStatus(String customerId, String workflowStatus);
+    java.util.Optional<UnderwritingRecord> findByTrackingNumber(String trackingNumber);
 }

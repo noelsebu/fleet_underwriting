@@ -41,6 +41,10 @@
         .coverage-pill { display: inline-flex; align-items: center; gap: 5px; background: #e9ecef; color: #333;
                          padding: 4px 12px; border-radius: 20px; font-size: .83rem; margin: 3px; }
         .customer-id-box { background: #f0f4ff; border: 2px solid #0d6efd; border-radius: 10px; padding: 16px 20px; }
+        .tracking-box { background: #fff8e1; border: 2px solid #ffc107; border-radius: 10px; padding: 16px 20px; }
+        .tracking-number { font-family: 'Courier New', monospace; font-size: 1.3rem; font-weight: 800; color: #856404; }
+        .expired-badge { background: #dc3545; color: white; border-radius: 6px; padding: 2px 10px;
+                         font-size: .78rem; font-weight: 700; vertical-align: middle; }
         @keyframes fadeUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
         .animate-in { animation: fadeUp .5s ease forwards; }
         .delay-1 { animation-delay: .1s; opacity: 0; }
@@ -61,7 +65,7 @@
     <h2 class="fw-bold mb-1 animate-in" style="color:#1b3a5c;">Your Quote Result</h2>
     <p class="text-muted mb-4 animate-in">Here's your personalised risk assessment.</p>
 
-    <!-- Risk Assessment -->
+    <!-- Risk Assessment Card -->
     <div class="risk-card mb-4 animate-in delay-1">
         <div class="row align-items-center">
             <div class="col-md-3 text-center mb-3 mb-md-0">
@@ -113,7 +117,7 @@
     <div th:if="${record.workflowStatus == 'PENDING_CUSTOMER_ACCEPTANCE'}" class="animate-in delay-2">
         <div class="risk-card mb-4 border-start border-success border-4">
             <h5 class="fw-bold text-success mb-1"><i class="bi bi-check-circle-fill me-2"></i>Your application is approved!</h5>
-            <p class="text-muted mb-3">Your fleet's risk profile is <strong>LOW</strong>. Click below to accept and generate your policy.</p>
+            <p class="text-muted mb-3">Your fleet's risk profile is <strong>LOW</strong>. Click below to accept and generate your 1-year policy.</p>
             <div class="d-flex align-items-center gap-3">
                 <div>
                     <div class="text-muted small">Plan</div>
@@ -124,8 +128,14 @@
                     <div class="text-muted small">Annual Premium</div>
                     <div class="fw-bold text-primary" th:text="'$' + ${record.annualPremium}"></div>
                 </div>
+                <div class="vr"></div>
+                <div>
+                    <div class="text-muted small">Policy Duration</div>
+                    <div class="fw-bold">1 Year</div>
+                </div>
             </div>
             <form th:action="@{/underwriting/accept/{id}(id=${record.id})}" method="post" class="mt-3">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
                 <button type="submit" class="btn btn-success btn-lg px-5">
                     <i class="bi bi-file-earmark-check me-2"></i>Accept &amp; Generate Policy
                 </button>
@@ -133,15 +143,49 @@
         </div>
     </div>
 
-    <!-- MEDIUM/HIGH RISK: Pending admin review -->
+    <!-- HIGH RISK: User must request a review -->
+    <div th:if="${record.workflowStatus == 'HIGH_RISK_REVIEW'}" class="animate-in delay-2">
+        <div class="risk-card mb-4 border-start border-danger border-4">
+            <h5 class="fw-bold text-danger mb-2"><i class="bi bi-shield-exclamation me-2"></i>High Risk Profile Detected</h5>
+            <p class="text-muted mb-3">
+                Your fleet's risk profile has been assessed as <strong>HIGH</strong>. Automatic policy issuance is not available.
+                You may submit a <strong>manual policy review request</strong> — our underwriting team will evaluate your application.
+            </p>
+            <div class="alert alert-warning py-2 mb-3 small">
+                <i class="bi bi-info-circle me-1"></i>
+                Submitting a request does <strong>not</strong> guarantee policy issuance. A tracking number will be assigned so you can monitor the status.
+            </div>
+            <form th:action="@{/underwriting/request/{id}(id=${record.id})}" method="post">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <button type="submit" class="btn btn-warning fw-semibold px-4">
+                    <i class="bi bi-send me-2"></i>Submit Policy Review Request
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MEDIUM or HIGH (after request): Pending admin review -->
     <div th:if="${record.workflowStatus == 'PENDING_ADMIN_REVIEW'}" class="animate-in delay-2">
         <div class="alert alert-warning d-flex gap-3 align-items-start mb-4" style="border-radius:12px;">
             <i class="bi bi-hourglass-split" style="font-size:1.6rem; margin-top:2px;"></i>
-            <div>
+            <div class="flex-grow-1">
                 <h5 class="fw-bold mb-1">Application Under Review</h5>
-                <p class="mb-1">Your application has been submitted for manual underwriting review due to its risk profile.</p>
-                <p class="mb-0 small text-muted">Our team will assess your application and contact you at
-                    <strong th:text="${record.phoneNumber}"></strong> within 2 business days.</p>
+                <p class="mb-1">Your application has been submitted for manual underwriting review.</p>
+                <p class="mb-2 small text-muted">
+                    Our team will assess your application and contact you at
+                    <strong th:text="${record.email}"></strong> within 2 business days.
+                </p>
+                <!-- Show tracking number if this was a HIGH risk request -->
+                <div th:if="${record.trackingNumber != null}" class="tracking-box mt-2">
+                    <div class="text-muted small fw-bold mb-1">YOUR TRACKING NUMBER — use this to check your request status</div>
+                    <div class="tracking-number" th:text="${record.trackingNumber}"></div>
+                    <div class="mt-2">
+                        <a th:href="@{/underwriting/track(trackingNumber=${record.trackingNumber})}"
+                           class="btn btn-outline-warning btn-sm">
+                            <i class="bi bi-search me-1"></i>Track This Request
+                        </a>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -183,6 +227,20 @@
                         <td style="font-weight:700;" th:text="${record.customerId}"></td>
                     </tr>
                     <tr>
+                        <td>Policy Duration</td>
+                        <td>
+                            <span class="fw-semibold">1 Year</span>
+                            <span class="text-muted small ms-2">
+                                (<span th:text="${#temporals.format(record.issuedAt, 'dd MMM yyyy')}"></span>
+                                →
+                                <span th:text="${#temporals.format(record.expiresAt, 'dd MMM yyyy')}"></span>)
+                            </span>
+                            <!-- Expired badge -->
+                            <span th:if="${record.expiresAt != null and record.expiresAt.isBefore(#temporals.createNow())}"
+                                  class="expired-badge ms-2">EXPIRED</span>
+                        </td>
+                    </tr>
+                    <tr>
                         <td>Coverage</td>
                         <td>
                             <span th:each="c : ${record.coverages}" class="coverage-pill">
@@ -209,6 +267,11 @@
                 <div>
                     <h5 class="fw-bold mb-1">Application Rejected</h5>
                     <p class="mb-2 text-muted">After review, we are unable to offer coverage at this time based on your fleet's risk profile.</p>
+                    <div th:if="${record.adminComment != null and !#strings.isEmpty(record.adminComment)}"
+                         class="p-3 rounded mb-2" style="background:rgba(255,255,255,.6); border-left:3px solid #dc3545;">
+                        <div class="small fw-bold text-danger mb-1">Reason from underwriter:</div>
+                        <div class="small" th:text="${record.adminComment}"></div>
+                    </div>
                     <p class="mb-0 small">You may re-apply after addressing the risk factors above, or
                         <a th:href="@{/}" class="fw-bold">explore other plans</a>.</p>
                 </div>
@@ -219,6 +282,9 @@
     <div class="d-flex gap-3 animate-in delay-3">
         <a th:href="@{/}" class="btn btn-outline-primary"><i class="bi bi-arrow-left me-1"></i> Back to Plans</a>
         <a th:href="@{/policy/lookup}" class="btn btn-light"><i class="bi bi-search me-1"></i> Look Up Policy</a>
+        <a th:href="@{/underwriting/track}" class="btn btn-outline-warning btn-sm align-self-center ms-auto">
+            <i class="bi bi-geo-alt me-1"></i> Track a Request
+        </a>
     </div>
 </div>
 

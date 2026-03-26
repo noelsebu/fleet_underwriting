@@ -99,6 +99,14 @@
                     <div class="invalid-feedback" th:if="${#fields.hasErrors('businessInfo.phoneNumber')}"
                          th:errors="*{businessInfo.phoneNumber}"></div>
                 </div>
+                <div class="col-md-5">
+                    <label class="form-label">Email Address</label>
+                    <input type="email" th:field="*{businessInfo.email}"
+                           th:classappend="${#fields.hasErrors('businessInfo.email')} ? 'is-invalid'"
+                           class="form-control" placeholder="contact@company.com" />
+                    <div class="invalid-feedback" th:if="${#fields.hasErrors('businessInfo.email')}"
+                         th:errors="*{businessInfo.email}"></div>
+                </div>
                 <div class="col-md-3">
                     <label class="form-label">Years Operating</label>
                     <input type="number" th:field="*{businessInfo.yearsInOperation}"

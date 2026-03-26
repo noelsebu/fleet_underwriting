@@ -62,13 +62,20 @@ public class UnderwritingFormController {
                 .orElse(quotes.get(0));
 
         String riskCat = response.getRiskCategory().name();
-        String workflowStatus = riskCat.equals("LOW")
-                ? "PENDING_CUSTOMER_ACCEPTANCE"
-                : "PENDING_ADMIN_REVIEW";
+        String workflowStatus;
+        if ("LOW".equals(riskCat)) {
+            workflowStatus = "PENDING_CUSTOMER_ACCEPTANCE";
+        } else if ("MEDIUM".equals(riskCat)) {
+            workflowStatus = "PENDING_ADMIN_REVIEW";
+        } else {
+            // HIGH risk: user must explicitly request a policy review
+            workflowStatus = "HIGH_RISK_REVIEW";
+        }
 
         UnderwritingRecord record = UnderwritingRecord.builder()
                 .companyName(request.getBusinessInfo().getCompanyName())
                 .phoneNumber(request.getBusinessInfo().getPhoneNumber())
+                .email(request.getBusinessInfo().getEmail())
                 .selectedTier(selectedTier)
                 .submittedAt(LocalDateTime.now())
                 .riskScore(response.getRiskScore())
@@ -93,6 +100,7 @@ public class UnderwritingFormController {
         return "underwriting-result";
     }
 
+    /** LOW risk: customer accepts and policy is immediately issued. */
     @PostMapping("/underwriting/accept/{id}")
     public String acceptPolicy(@PathVariable Long id) {
         UnderwritingRecord record = recordRepository.findById(id)
@@ -102,15 +110,45 @@ public class UnderwritingFormController {
             return "redirect:/underwriting/result/" + id;
         }
 
-        String customerId = String.format("CUST-%d-%04d", LocalDate.now().getYear(), record.getId());
-        String policyNumber = String.format("Pol-%d-%d", LocalDate.now().getYear(), record.getId());
-
+        LocalDateTime now = LocalDateTime.now();
         record.setWorkflowStatus("POLICY_ISSUED");
-        record.setCustomerId(customerId);
-        record.setPolicyNumber(policyNumber);
+        record.setCustomerId(String.format("CUST-%d-%04d", LocalDate.now().getYear(), record.getId()));
+        record.setPolicyNumber(String.format("Pol-%d-%d", LocalDate.now().getYear(), record.getId()));
+        record.setIssuedAt(now);
+        record.setExpiresAt(now.plusYears(1));
         recordRepository.save(record);
 
         return "redirect:/underwriting/result/" + id;
+    }
+
+    /** HIGH risk: user explicitly requests a policy review — assigns a tracking number. */
+    @PostMapping("/underwriting/request/{id}")
+    public String requestPolicyReview(@PathVariable Long id) {
+        UnderwritingRecord record = recordRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Record not found: " + id));
+
+        if (!"HIGH_RISK_REVIEW".equals(record.getWorkflowStatus())) {
+            return "redirect:/underwriting/result/" + id;
+        }
+
+        record.setTrackingNumber(String.format("REQ-%d-%d", LocalDate.now().getYear(), record.getId()));
+        record.setWorkflowStatus("PENDING_ADMIN_REVIEW");
+        recordRepository.save(record);
+
+        return "redirect:/underwriting/result/" + id;
+    }
+
+    /** Tracking page: look up a HIGH-risk request by tracking number. */
+    @GetMapping("/underwriting/track")
+    public String trackRequest(@RequestParam(required = false) String trackingNumber, Model model) {
+        if (trackingNumber != null && !trackingNumber.isBlank()) {
+            recordRepository.findByTrackingNumber(trackingNumber.trim().toUpperCase())
+                    .ifPresentOrElse(
+                            r -> model.addAttribute("record", r),
+                            () -> model.addAttribute("error", "No request found for tracking number: " + trackingNumber)
+                    );
+        }
+        return "underwriting-track";
     }
 
     @GetMapping("/history")

@@ -127,6 +127,9 @@ class AdminControllerTest {
         assertThat(updated.getWorkflowStatus()).isEqualTo("POLICY_ISSUED");
         assertThat(updated.getCustomerId()).startsWith("CUST-");
         assertThat(updated.getPolicyNumber()).startsWith("Pol-");
+        assertThat(updated.getIssuedAt()).isNotNull();
+        assertThat(updated.getExpiresAt()).isNotNull();
+        assertThat(updated.getExpiresAt()).isAfter(updated.getIssuedAt());
     }
 
     @Test
@@ -154,6 +157,20 @@ class AdminControllerTest {
 
         assertThat(recordRepo.findById(record.getId()).orElseThrow().getWorkflowStatus())
                 .isEqualTo("REJECTED");
+    }
+
+    @Test
+    @WithMockUser(username = "admin", authorities = "ROLE_ADMIN")
+    void reject_withAdminComment_savesComment() throws Exception {
+        UnderwritingRecord record = recordRepo.save(pendingRecord("CommentRejectCo", "PENDING_ADMIN_REVIEW"));
+
+        mvc.perform(post("/admin/reject/" + record.getId()).with(csrf())
+           .param("adminComment", "Too many at-fault claims."))
+           .andExpect(status().is3xxRedirection());
+
+        UnderwritingRecord updated = recordRepo.findById(record.getId()).orElseThrow();
+        assertThat(updated.getWorkflowStatus()).isEqualTo("REJECTED");
+        assertThat(updated.getAdminComment()).isEqualTo("Too many at-fault claims.");
     }
 
     @Test

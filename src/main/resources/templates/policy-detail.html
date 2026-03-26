@@ -84,7 +84,17 @@
                 </tr>
                 <tr>
                     <td>Policy Issued</td>
-                    <td th:text="${#temporals.format(record.submittedAt, 'dd MMM yyyy')}"></td>
+                    <td th:text="${record.issuedAt != null} ? ${#temporals.format(record.issuedAt, 'dd MMM yyyy')} : ${#temporals.format(record.submittedAt, 'dd MMM yyyy')}"></td>
+                </tr>
+                <tr>
+                    <td>Policy Expires</td>
+                    <td>
+                        <span th:if="${record.expiresAt != null}" th:text="${#temporals.format(record.expiresAt, 'dd MMM yyyy')}"></span>
+                        <span th:if="${record.expiresAt != null and record.expiresAt.isBefore(#temporals.createNow())}"
+                              style="background:#dc3545; color:white; border-radius:6px; padding:2px 8px; font-size:.75rem; font-weight:700; margin-left:8px;">EXPIRED</span>
+                        <span th:if="${record.expiresAt != null and !record.expiresAt.isBefore(#temporals.createNow())}"
+                              style="background:#198754; color:white; border-radius:6px; padding:2px 8px; font-size:.75rem; font-weight:700; margin-left:8px;">ACTIVE</span>
+                    </td>
                 </tr>
                 <tr>
                     <td>Coverage</td>

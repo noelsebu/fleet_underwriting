@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>FleetGuard — Track Your Request</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body { background: #f0f4f8; }
+        .header { background: linear-gradient(135deg, #0d1b2a, #1b3a5c); color: white;
+                  padding: 40px 20px 30px; text-align: center; }
+        .track-card { max-width: 620px; margin: -20px auto 40px; border-radius: 16px;
+                      box-shadow: 0 4px 24px rgba(0,0,0,.10); border: none; }
+        .status-step { display: flex; align-items: flex-start; gap: 14px; padding: 14px 0;
+                       border-bottom: 1px solid #f0f0f0; }
+        .status-step:last-child { border-bottom: none; }
+        .step-icon { width: 36px; height: 36px; border-radius: 50%; display: flex;
+                     align-items: center; justify-content: center; flex-shrink: 0; font-size: 1rem; }
+        .step-done    { background: #d1e7dd; color: #0f5132; }
+        .step-active  { background: #fff3cd; color: #664d03; }
+        .step-pending { background: #e9ecef; color: #6c757d; }
+        .step-rejected { background: #f8d7da; color: #842029; }
+        .detail-row { display: flex; justify-content: space-between; padding: 8px 0;
+                      border-bottom: 1px solid #f5f5f5; font-size: .93rem; }
+        .detail-row:last-child { border-bottom: none; }
+        .tracking-number { font-family: 'Courier New', monospace; font-size: 1.3rem;
+                           font-weight: 800; color: #856404; letter-spacing: 1px; }
+    </style>
+</head>
+<body>
+
+<nav style="background:#0d1b2a; padding:10px 24px; display:flex; align-items:center; justify-content:space-between;">
+    <a th:href="@{/admin/login}" class="btn btn-outline-light btn-sm">
+        <i class="bi bi-shield-lock me-1"></i> Admin Login
+    </a>
+    <div class="d-flex gap-2">
+        <a th:href="@{/}" class="btn btn-outline-light btn-sm"><i class="bi bi-house me-1"></i> Home</a>
+        <a th:href="@{/policy/lookup}" class="btn btn-outline-light btn-sm"><i class="bi bi-search me-1"></i> Check My Policy</a>
+    </div>
+</nav>
+
+<div class="header">
+    <i class="bi bi-geo-alt-fill" style="font-size:2.4rem; color:#ffc107;"></i>
+    <h2 class="fw-bold mt-2 mb-1">Track Your Request</h2>
+    <p class="mb-0" style="opacity:.8;">Enter your tracking number to check the status of your policy review request.</p>
+</div>
+
+<div class="container" style="padding-top:40px;">
+    <div class="card track-card">
+        <div class="card-body p-4">
+
+            <!-- Search form -->
+            <form th:action="@{/underwriting/track}" method="get" class="mb-4">
+                <label class="form-label fw-semibold">Tracking Number</label>
+                <div class="input-group">
+                    <input type="text" name="trackingNumber" class="form-control"
+                           placeholder="e.g. REQ-2026-5"
+                           th:value="${param.trackingNumber}"
+                           style="text-transform:uppercase; font-family:monospace; font-size:1rem;"
+                           required>
+                    <button class="btn btn-primary" type="submit">
+                        <i class="bi bi-search me-1"></i> Track
+                    </button>
+                </div>
+            </form>
+
+            <!-- Error -->
+            <div th:if="${error}" class="alert alert-warning d-flex align-items-center gap-2">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+                <span th:text="${error}"></span>
+            </div>
+
+            <!-- Result -->
+            <div th:if="${record != null}">
+
+                <!-- Tracking number display -->
+                <div class="p-3 rounded mb-4" style="background:#fff8e1; border:1.5px solid #ffe082;">
+                    <div class="text-muted small fw-bold mb-1">TRACKING NUMBER</div>
+                    <div class="tracking-number" th:text="${record.trackingNumber}"></div>
+                </div>
+
+                <!-- Status timeline -->
+                <h6 class="fw-bold mb-3" style="color:#1b3a5c;">Request Status</h6>
+                <div class="mb-4">
+
+                    <!-- Step 1: Submitted -->
+                    <div class="status-step">
+                        <div class="step-icon step-done"><i class="bi bi-check-lg"></i></div>
+                        <div>
+                            <div class="fw-semibold">Request Submitted</div>
+                            <div class="text-muted small"
+                                 th:text="${#temporals.format(record.submittedAt, 'dd MMM yyyy HH:mm')}"></div>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Under Review -->
+                    <div class="status-step">
+                        <div th:classappend="${record.workflowStatus == 'PENDING_ADMIN_REVIEW'} ? 'step-active' : 'step-done'"
+                             class="step-icon">
+                            <i th:classappend="${record.workflowStatus == 'PENDING_ADMIN_REVIEW'} ? 'bi-hourglass-split' : 'bi-check-lg'"
+                               class="bi"></i>
+                        </div>
+                        <div>
+                            <div class="fw-semibold">Under Underwriting Review</div>
+                            <div class="text-muted small"
+                                 th:text="${record.workflowStatus == 'PENDING_ADMIN_REVIEW'} ? 'In progress — our team is reviewing your application.' : 'Completed'"></div>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Decision -->
+                    <div class="status-step">
+                        <div class="step-icon"
+                             th:classappend="${record.workflowStatus == 'POLICY_ISSUED'} ? 'step-done' :
+                                             (${record.workflowStatus == 'REJECTED'} ? 'step-rejected' : 'step-pending')">
+                            <i class="bi"
+                               th:classappend="${record.workflowStatus == 'POLICY_ISSUED'} ? 'bi-shield-check' :
+                                               (${record.workflowStatus == 'REJECTED'} ? 'bi-x-lg' : 'bi-three-dots')"></i>
+                        </div>
+                        <div>
+                            <div class="fw-semibold"
+                                 th:text="${record.workflowStatus == 'POLICY_ISSUED'} ? 'Policy Issued' :
+                                          (${record.workflowStatus == 'REJECTED'} ? 'Application Rejected' : 'Awaiting Decision')"></div>
+                            <div class="text-muted small"
+                                 th:if="${record.workflowStatus == 'PENDING_ADMIN_REVIEW'}">
+                                Pending — decision expected within 2 business days.
+                            </div>
+                            <div th:if="${record.workflowStatus == 'POLICY_ISSUED'}">
+                                <span class="badge bg-success">Policy Active</span>
+                                <span class="text-muted small ms-2"
+                                      th:text="${#temporals.format(record.issuedAt, 'dd MMM yyyy')}"></span>
+                            </div>
+                            <div th:if="${record.workflowStatus == 'REJECTED'}" class="text-danger small">
+                                <span th:text="${record.adminComment != null and !#strings.isEmpty(record.adminComment)} ? ${record.adminComment} : 'Application did not meet underwriting criteria.'"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Application details -->
+                <h6 class="fw-bold mb-3" style="color:#1b3a5c;">Application Details</h6>
+                <div class="mb-4">
+                    <div class="detail-row">
+                        <span class="text-muted">Company</span>
+                        <span class="fw-semibold" th:text="${record.companyName}"></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="text-muted">Plan</span>
+                        <span th:text="${record.selectedTier}"></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="text-muted">Quoted Annual Premium</span>
+                        <span class="fw-semibold text-primary" th:text="'$' + ${record.annualPremium}"></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="text-muted">Risk Category</span>
+                        <span class="badge bg-danger" th:text="${record.riskCategory}"></span>
+                    </div>
+                    <div class="detail-row" th:if="${record.workflowStatus == 'POLICY_ISSUED'}">
+                        <span class="text-muted">Policy Number</span>
+                        <span class="fw-bold" style="font-family:monospace;" th:text="${record.policyNumber}"></span>
+                    </div>
+                    <div class="detail-row" th:if="${record.workflowStatus == 'POLICY_ISSUED'}">
+                        <span class="text-muted">Customer ID</span>
+                        <span class="fw-bold text-primary" style="font-family:monospace;" th:text="${record.customerId}"></span>
+                    </div>
+                    <div class="detail-row" th:if="${record.workflowStatus == 'POLICY_ISSUED' and record.expiresAt != null}">
+                        <span class="text-muted">Policy Valid Until</span>
+                        <span th:text="${#temporals.format(record.expiresAt, 'dd MMM yyyy')}"></span>
+                    </div>
+                </div>
+
+                <!-- If approved, go to policy lookup -->
+                <div th:if="${record.workflowStatus == 'POLICY_ISSUED'}" class="alert alert-success small">
+                    <i class="bi bi-check-circle me-1"></i>
+                    Your policy has been issued! Use Customer ID <strong th:text="${record.customerId}"></strong>
+                    at <a th:href="@{/policy/lookup}">Policy Lookup</a> to view full details and file claims.
+                </div>
+            </div>
+
+            <div class="mt-3 d-flex gap-2">
+                <a th:href="@{/}" class="btn btn-outline-secondary flex-fill"><i class="bi bi-house me-1"></i> Home</a>
+                <a th:href="@{/policy/lookup}" class="btn btn-outline-primary flex-fill"><i class="bi bi-search me-1"></i> Policy Lookup</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

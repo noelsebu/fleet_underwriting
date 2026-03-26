@@ -76,22 +76,26 @@ public class AdminController {
         UnderwritingRecord record = recordRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Record not found: " + id));
 
-        String customerId   = String.format("CUST-%d-%04d", LocalDate.now().getYear(), record.getId());
-        String policyNumber = String.format("Pol-%d-%d", LocalDate.now().getYear(), record.getId());
+        LocalDate today = LocalDate.now();
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
 
         record.setWorkflowStatus("POLICY_ISSUED");
-        record.setCustomerId(customerId);
-        record.setPolicyNumber(policyNumber);
+        record.setCustomerId(String.format("CUST-%d-%04d", today.getYear(), record.getId()));
+        record.setPolicyNumber(String.format("Pol-%d-%d", today.getYear(), record.getId()));
+        record.setIssuedAt(now);
+        record.setExpiresAt(now.plusYears(1));
         recordRepository.save(record);
 
         return "redirect:/admin/queue";
     }
 
     @PostMapping("/reject/{id}")
-    public String reject(@PathVariable Long id) {
+    public String reject(@PathVariable Long id,
+                         @RequestParam(required = false) String adminComment) {
         UnderwritingRecord record = recordRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Record not found: " + id));
         record.setWorkflowStatus("REJECTED");
+        record.setAdminComment(adminComment);
         recordRepository.save(record);
         return "redirect:/admin/queue";
     }
