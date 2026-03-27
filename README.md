@@ -17,7 +17,7 @@ A Spring Boot + Thymeleaf web application that automates commercial fleet insura
 | **Admin portal** | Review queue, claim approvals, premium negotiations, dashboard financials |
 | **Claims** | Coverage limit enforcement, admin-set approved amounts, policy auto-expiry |
 | **Tracking** | `REQ-` tracking numbers for review requests, `NEG-` for negotiations |
-| **Persistence** | H2 in-memory (local dev) · PostgreSQL (production on Render) |
+| **Persistence** | H2 in-memory |
 
 ---
 
