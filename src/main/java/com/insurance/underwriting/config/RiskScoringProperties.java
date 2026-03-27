@@ -41,7 +41,6 @@ public class RiskScoringProperties {
         private double businessNewModerate  = 0.06;
         private double creditScoreLow       = 0.08;
         private double creditScoreFair      = 0.04;
-        private double warZone              = 0.20;
 
         // Fleet
         private double fleetAgeHigh         = 0.15;
@@ -71,8 +70,6 @@ public class RiskScoringProperties {
         public void setCreditScoreLow(double v)  { this.creditScoreLow = v; }
         public double getCreditScoreFair()       { return creditScoreFair; }
         public void setCreditScoreFair(double v) { this.creditScoreFair = v; }
-        public double getWarZone()               { return warZone; }
-        public void setWarZone(double v)         { this.warZone = v; }
 
         public double getFleetAgeHigh()          { return fleetAgeHigh; }
         public void setFleetAgeHigh(double v)    { this.fleetAgeHigh = v; }

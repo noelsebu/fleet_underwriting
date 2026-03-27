@@ -233,31 +233,11 @@ class RiskScoringServiceTest {
         assertThat(r.getDecisionFactors()).anyMatch(f -> f.contains("Low credit score"));
     }
 
-    @Test
-    void warZone_shouldSignificantlyIncreaseScore() {
-        RiskScoreResponse noWarZone = service.score(buildRequest(
-                10, 750, 20, 3.0, VehicleType.SEDAN, 35.0, 10, 0, new BigDecimal("0"), 0, false
-        ));
-        RiskScoreResponse warZone = service.score(buildRequest(
-                10, 750, 20, 3.0, VehicleType.SEDAN, 35.0, 10, 0, new BigDecimal("0"), 0, true
-        ));
-        assertThat(warZone.getRiskScore()).isGreaterThan(noWarZone.getRiskScore());
-        assertThat(warZone.getDecisionFactors()).anyMatch(f -> f.contains("war zone"));
-    }
-
     private RiskScoreRequest buildRequest(
             int years, int credit,
             int vehicles, double fleetAge, VehicleType vehicleType,
             double driverAge, int drivers,
             int claims, BigDecimal claimAmount, int atFault) {
-        return buildRequest(years, credit, vehicles, fleetAge, vehicleType, driverAge, drivers, claims, claimAmount, atFault, false);
-    }
-
-    private RiskScoreRequest buildRequest(
-            int years, int credit,
-            int vehicles, double fleetAge, VehicleType vehicleType,
-            double driverAge, int drivers,
-            int claims, BigDecimal claimAmount, int atFault, boolean warZone) {
 
         RiskScoreRequest req = new RiskScoreRequest();
 
@@ -265,7 +245,6 @@ class RiskScoringServiceTest {
         b.setCompanyName("Test Co");
         b.setYearsInOperation(years);
         b.setCreditScore(credit);
-        b.setWarZone(warZone);
         req.setBusinessInfo(b);
 
         RiskScoreRequest.FleetDetails f = new RiskScoreRequest.FleetDetails();

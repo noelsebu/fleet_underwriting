@@ -44,8 +44,6 @@ public class RiskScoreRequest {
         @Min(value = 300) @Max(value = 850)
         @NotNull(message = "Credit score is required")
         private Integer creditScore;
-
-        private boolean warZone;
     }
 
     @Data

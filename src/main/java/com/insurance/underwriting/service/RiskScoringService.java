@@ -5,7 +5,6 @@ import com.insurance.underwriting.model.RecommendedAction;
 import com.insurance.underwriting.model.RiskCategory;
 import com.insurance.underwriting.model.RiskScoreRequest;
 import com.insurance.underwriting.model.RiskScoreResponse;
-import com.insurance.underwriting.model.VehicleType;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -97,11 +96,6 @@ public class RiskScoringService {
         } else if (businessInfo.getCreditScore() < 700) {
             score += props.getWeights().getCreditScoreFair();
             factors.add("Fair credit score (600–699) — moderate financial risk");
-        }
-
-        if (businessInfo.isWarZone()) {
-            score += props.getWeights().getWarZone();
-            factors.add("Operations in war zone — extreme environmental and liability risk");
         }
 
         return score;

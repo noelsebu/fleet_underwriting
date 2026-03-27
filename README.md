@@ -150,7 +150,6 @@ Multiplier formula: `1.0 + (score × 1.5)` — scales linearly from 1.0× at sco
 | Business 2–4 years old | +0.06 |
 | Credit score < 600 | +0.08 |
 | Credit score 600–699 | +0.04 |
-| War zone operations | +0.20 |
 
 #### Fleet Condition
 | Condition | Weight |
@@ -199,7 +198,6 @@ risk.weights.business-new-high=0.12
 risk.weights.business-new-moderate=0.06
 risk.weights.credit-score-low=0.08
 risk.weights.credit-score-fair=0.04
-risk.weights.war-zone=0.20
 
 # Fleet weights
 risk.weights.fleet-age-high=0.15
@@ -224,53 +222,6 @@ risk.weights.at-fault-high=0.04
 
 ---
 
-## REST API
-
-### `POST /api/v1/underwriting/score`
-
-**Request**
-```json
-{
-  "businessInfo": {
-    "companyName": "Acme Logistics",
-    "email": "ops@acme.com",
-    "phoneNumber": "+441234567890",
-    "yearsInOperation": 8,
-    "creditScore": 720,
-    "warZone": false
-  },
-  "fleetDetails": {
-    "totalVehicles": 20,
-    "averageVehicleAgeYears": 3.5,
-    "primaryVehicleType": "VAN"
-  },
-  "driverPool": {
-    "totalDrivers": 25,
-    "averageDriverAge": 34.0
-  },
-  "claimsHistory": {
-    "claimsLast3Years": 2,
-    "totalClaimAmount": 15000,
-    "atFaultCount": 1
-  }
-}
-```
-
-**Response**
-```json
-{
-  "riskScore": 0.21,
-  "riskCategory": "LOW",
-  "recommendedAction": "APPROVE",
-  "premiumMultiplier": 1.32,
-  "decisionFactors": [
-    "Low claims frequency — minor loss history present"
-  ]
-}
-```
-
----
-
 ## Running Locally
 
 ```bash
@@ -286,19 +237,6 @@ mvn test
 ```
 
 123 tests across all controllers, services, and security configuration.
-
----
-
-## Production (PostgreSQL on Render)
-
-Set the following environment variables:
-
-| Variable | Value |
-|---|---|
-| `SPRING_DATASOURCE_URL` | `jdbc:postgresql://host:5432/dbname` |
-| `SPRING_DATASOURCE_USERNAME` | your db user |
-| `SPRING_DATASOURCE_PASSWORD` | your db password |
-| `SPRING_JPA_DATABASE_PLATFORM` | `org.hibernate.dialect.PostgreSQLDialect` |
 
 ---
 
