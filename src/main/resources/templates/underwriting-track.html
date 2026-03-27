@@ -94,44 +94,119 @@
                         </div>
                     </div>
 
-                    <!-- Step 2: Under Review -->
-                    <div class="status-step">
-                        <div th:classappend="${record.workflowStatus == 'PENDING_ADMIN_REVIEW'} ? 'step-active' : 'step-done'"
-                             class="step-icon">
-                            <i th:classappend="${record.workflowStatus == 'PENDING_ADMIN_REVIEW'} ? 'bi-hourglass-split' : 'bi-check-lg'"
-                               class="bi"></i>
+                    <!-- ── NEGOTIATION FLOW (NEG- tracking numbers) ── -->
+                    <div th:if="${record.trackingNumber != null and #strings.startsWith(record.trackingNumber, 'NEG')}">
+
+                        <!-- Step 2: Negotiation Under Review -->
+                        <div class="status-step">
+                            <div class="step-icon"
+                                 th:classappend="${record.workflowStatus == 'NEGOTIATION_REQUESTED'} ? 'step-active' : 'step-done'">
+                                <i class="bi"
+                                   th:classappend="${record.workflowStatus == 'NEGOTIATION_REQUESTED'} ? 'bi-hourglass-split' : 'bi-check-lg'"></i>
+                            </div>
+                            <div>
+                                <div class="fw-semibold">Premium Negotiation Requested</div>
+                                <div class="text-muted small"
+                                     th:text="${record.workflowStatus == 'NEGOTIATION_REQUESTED'} ? 'Awaiting our team\'s counter-offer.' : 'Completed'"></div>
+                            </div>
                         </div>
-                        <div>
-                            <div class="fw-semibold">Under Underwriting Review</div>
-                            <div class="text-muted small"
-                                 th:text="${record.workflowStatus == 'PENDING_ADMIN_REVIEW'} ? 'In progress — our team is reviewing your application.' : 'Completed'"></div>
+
+                        <!-- Step 3: Offer Received -->
+                        <div class="status-step">
+                            <div class="step-icon"
+                                 th:classappend="${record.workflowStatus == 'NEGOTIATION_OFFERED'} ? 'step-active' :
+                                                 (${record.workflowStatus == 'POLICY_ISSUED'} ? 'step-done' : 'step-pending')">
+                                <i class="bi"
+                                   th:classappend="${record.workflowStatus == 'NEGOTIATION_OFFERED'} ? 'bi-envelope-open' :
+                                                   (${record.workflowStatus == 'POLICY_ISSUED'} ? 'bi-check-lg' : 'bi-three-dots')"></i>
+                            </div>
+                            <div style="width:100%;">
+                                <div class="fw-semibold">Counter-Offer Received</div>
+                                <div th:if="${record.workflowStatus == 'NEGOTIATION_OFFERED'}" class="mt-2">
+                                    <div class="alert alert-warning py-2 mb-2 small">
+                                        <i class="bi bi-tags me-1"></i>
+                                        Our offered premium: <strong th:text="'$' + ${record.negotiatedPremium}"></strong>
+                                        (original quote: <span th:text="'$' + ${record.annualPremium}"></span>)
+                                    </div>
+                                    <form th:action="@{/underwriting/accept-offer/{id}(id=${record.id})}" method="post">
+                                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                                        <button type="submit" class="btn btn-success btn-sm">
+                                            <i class="bi bi-check-circle me-1"></i> Accept Offer &amp; Generate Policy
+                                        </button>
+                                    </form>
+                                </div>
+                                <div th:if="${record.workflowStatus == 'POLICY_ISSUED'}" class="text-muted small">
+                                    Offer accepted — policy issued.
+                                </div>
+                                <div th:if="${record.workflowStatus == 'NEGOTIATION_REQUESTED'}" class="text-muted small">
+                                    Pending — offer not yet sent.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 4: Policy Issued -->
+                        <div class="status-step">
+                            <div class="step-icon"
+                                 th:classappend="${record.workflowStatus == 'POLICY_ISSUED'} ? 'step-done' : 'step-pending'">
+                                <i class="bi"
+                                   th:classappend="${record.workflowStatus == 'POLICY_ISSUED'} ? 'bi-shield-check' : 'bi-three-dots'"></i>
+                            </div>
+                            <div>
+                                <div class="fw-semibold">Policy Issued</div>
+                                <div th:if="${record.workflowStatus == 'POLICY_ISSUED'}">
+                                    <span class="badge bg-success">Active</span>
+                                    <span class="text-muted small ms-2"
+                                          th:text="${#temporals.format(record.issuedAt, 'dd MMM yyyy')}"></span>
+                                </div>
+                                <div th:unless="${record.workflowStatus == 'POLICY_ISSUED'}" class="text-muted small">
+                                    Pending acceptance of offer.
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Step 3: Decision -->
-                    <div class="status-step">
-                        <div class="step-icon"
-                             th:classappend="${record.workflowStatus == 'POLICY_ISSUED'} ? 'step-done' :
-                                             (${record.workflowStatus == 'REJECTED'} ? 'step-rejected' : 'step-pending')">
-                            <i class="bi"
-                               th:classappend="${record.workflowStatus == 'POLICY_ISSUED'} ? 'bi-shield-check' :
-                                               (${record.workflowStatus == 'REJECTED'} ? 'bi-x-lg' : 'bi-three-dots')"></i>
+                    <!-- ── REVIEW FLOW (REQ- tracking numbers) ── -->
+                    <div th:unless="${record.trackingNumber != null and #strings.startsWith(record.trackingNumber, 'NEG')}">
+
+                        <!-- Step 2: Under Review -->
+                        <div class="status-step">
+                            <div th:classappend="${record.workflowStatus == 'PENDING_ADMIN_REVIEW'} ? 'step-active' : 'step-done'"
+                                 class="step-icon">
+                                <i th:classappend="${record.workflowStatus == 'PENDING_ADMIN_REVIEW'} ? 'bi-hourglass-split' : 'bi-check-lg'"
+                                   class="bi"></i>
+                            </div>
+                            <div>
+                                <div class="fw-semibold">Under Underwriting Review</div>
+                                <div class="text-muted small"
+                                     th:text="${record.workflowStatus == 'PENDING_ADMIN_REVIEW'} ? 'In progress — our team is reviewing your application.' : 'Completed'"></div>
+                            </div>
                         </div>
-                        <div>
-                            <div class="fw-semibold"
-                                 th:text="${record.workflowStatus == 'POLICY_ISSUED'} ? 'Policy Issued' :
-                                          (${record.workflowStatus == 'REJECTED'} ? 'Application Rejected' : 'Awaiting Decision')"></div>
-                            <div class="text-muted small"
-                                 th:if="${record.workflowStatus == 'PENDING_ADMIN_REVIEW'}">
-                                Pending — decision expected within 2 business days.
+
+                        <!-- Step 3: Decision -->
+                        <div class="status-step">
+                            <div class="step-icon"
+                                 th:classappend="${record.workflowStatus == 'POLICY_ISSUED'} ? 'step-done' :
+                                                 (${record.workflowStatus == 'REJECTED'} ? 'step-rejected' : 'step-pending')">
+                                <i class="bi"
+                                   th:classappend="${record.workflowStatus == 'POLICY_ISSUED'} ? 'bi-shield-check' :
+                                                   (${record.workflowStatus == 'REJECTED'} ? 'bi-x-lg' : 'bi-three-dots')"></i>
                             </div>
-                            <div th:if="${record.workflowStatus == 'POLICY_ISSUED'}">
-                                <span class="badge bg-success">Policy Active</span>
-                                <span class="text-muted small ms-2"
-                                      th:text="${#temporals.format(record.issuedAt, 'dd MMM yyyy')}"></span>
-                            </div>
-                            <div th:if="${record.workflowStatus == 'REJECTED'}" class="text-danger small">
-                                <span th:text="${record.adminComment != null and !#strings.isEmpty(record.adminComment)} ? ${record.adminComment} : 'Application did not meet underwriting criteria.'"></span>
+                            <div>
+                                <div class="fw-semibold"
+                                     th:text="${record.workflowStatus == 'POLICY_ISSUED'} ? 'Policy Issued' :
+                                              (${record.workflowStatus == 'REJECTED'} ? 'Application Rejected' : 'Awaiting Decision')"></div>
+                                <div class="text-muted small"
+                                     th:if="${record.workflowStatus == 'PENDING_ADMIN_REVIEW'}">
+                                    Pending — decision expected within 2 business days.
+                                </div>
+                                <div th:if="${record.workflowStatus == 'POLICY_ISSUED'}">
+                                    <span class="badge bg-success">Policy Active</span>
+                                    <span class="text-muted small ms-2"
+                                          th:text="${#temporals.format(record.issuedAt, 'dd MMM yyyy')}"></span>
+                                </div>
+                                <div th:if="${record.workflowStatus == 'REJECTED'}" class="text-danger small">
+                                    <span th:text="${record.adminComment != null and !#strings.isEmpty(record.adminComment)} ? ${record.adminComment} : 'Application did not meet underwriting criteria.'"></span>
+                                </div>
                             </div>
                         </div>
                     </div>
