@@ -11,7 +11,9 @@ import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Controller
 @RequestMapping("/admin")
@@ -148,8 +150,24 @@ public class AdminController {
 
     @GetMapping("/claims")
     public String claims(Model model) {
-        model.addAttribute("claims",
-                claimRepository.findByStatusOrderBySubmittedAtDesc("PENDING_REVIEW"));
+        List<PolicyClaim> claims = claimRepository.findByStatusOrderBySubmittedAtDesc("PENDING_REVIEW");
+
+        Map<String, BigDecimal> remainingCoverage = new HashMap<>();
+        for (PolicyClaim c : claims) {
+            remainingCoverage.computeIfAbsent(c.getPolicyNumber(), pn ->
+                recordRepository.findByPolicyNumber(pn)
+                    .map(policy -> {
+                        BigDecimal limit = coverageLimit(policy.getSelectedTier());
+                        BigDecimal approved = claimRepository.sumApprovedAmountByPolicyNumber(pn)
+                                .setScale(2, java.math.RoundingMode.HALF_UP);
+                        return limit.subtract(approved).max(BigDecimal.ZERO);
+                    })
+                    .orElse(null)
+            );
+        }
+
+        model.addAttribute("claims", claims);
+        model.addAttribute("remainingCoverage", remainingCoverage);
         return "admin/claims";
     }
 
@@ -159,21 +177,35 @@ public class AdminController {
                                @RequestParam(required = false) String adminNote) {
         PolicyClaim claim = claimRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Claim not found: " + id));
-        claim.setStatus("APPROVED");
-        claim.setApprovedAmount(approvedAmount);
-        claim.setAdminNote(adminNote);
-        claimRepository.save(claim);
 
-        // Check if cumulative approved claims exceed the coverage limit for this policy
-        recordRepository.findByPolicyNumber(claim.getPolicyNumber()).ifPresent(policy -> {
-            BigDecimal totalApproved = claimRepository.sumApprovedAmountByPolicyNumber(claim.getPolicyNumber())
-                    .setScale(2, java.math.RoundingMode.HALF_UP);
+        // Cap approved amount to remaining coverage so the limit is never exceeded
+        BigDecimal effectiveApproved = approvedAmount;
+        java.util.Optional<UnderwritingRecord> policyOpt = recordRepository.findByPolicyNumber(claim.getPolicyNumber());
+        if (policyOpt.isPresent()) {
+            UnderwritingRecord policy = policyOpt.get();
             BigDecimal limit = coverageLimit(policy.getSelectedTier());
-            if (totalApproved.compareTo(limit) >= 0) {
+            BigDecimal alreadyApproved = claimRepository.sumApprovedAmountByPolicyNumber(claim.getPolicyNumber())
+                    .setScale(2, java.math.RoundingMode.HALF_UP);
+            BigDecimal remaining = limit.subtract(alreadyApproved).max(BigDecimal.ZERO);
+            effectiveApproved = approvedAmount.min(remaining);
+
+            claim.setStatus("APPROVED");
+            claim.setApprovedAmount(effectiveApproved);
+            claim.setAdminNote(adminNote);
+            claimRepository.save(claim);
+
+            // Expire policy if coverage is now fully consumed
+            BigDecimal newTotal = alreadyApproved.add(effectiveApproved);
+            if (newTotal.compareTo(limit) >= 0) {
                 policy.setExpiresAt(java.time.LocalDateTime.now());
                 recordRepository.save(policy);
             }
-        });
+        } else {
+            claim.setStatus("APPROVED");
+            claim.setApprovedAmount(effectiveApproved);
+            claim.setAdminNote(adminNote);
+            claimRepository.save(claim);
+        }
 
         return "redirect:/admin/claims";
     }
