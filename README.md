@@ -1,71 +1,145 @@
-# FleetGuard — Fleet Underwriting Risk Scoring
+# FleetGuard — Fleet Insurance Underwriting System
 
-A Spring Boot application with a Thymeleaf web UI that automates insurance underwriting decisions for commercial vehicle fleets. Customers submit their fleet profile, get an instant risk assessment, and receive a policy — or have their application reviewed by an admin.
+A Spring Boot + Thymeleaf web application that automates commercial fleet insurance underwriting. Customers get instant risk assessments and quotes; the admin portal handles manual reviews, claim approvals, and premium negotiations.
+
+**Live demo:** [https://fleet-quote.onrender.com](https://fleet-quote.onrender.com)
+**Admin portal:** [https://fleet-quote.onrender.com/admin/claims](https://fleet-quote.onrender.com/admin/claims)
+
+---
 
 ## Features
 
-- Web UI built with Thymeleaf and Bootstrap 5
-- Landing page with plan selection (Basic, Premium, Diamond)
-- Underwriting form with phone number validation
-- Risk scoring engine using a sigmoid-normalised weighted sum
-- Customer workflow: instant policy for LOW risk, admin review queue for MEDIUM/HIGH
-- Admin portal with login, review queue, approve/reject actions
-- Customer ID assigned on policy issuance
-- Policy lookup by Customer ID or Policy Number
-- PostgreSQL persistence (H2 in-memory for local dev)
+| Area | Details |
+|---|---|
+| **Risk scoring** | Sigmoid-normalised weighted score across 4 dimensions |
+| **Plans** | Basic ($10k coverage), Premium ($15k), Diamond ($20k) |
+| **Customer workflows** | Instant issue (LOW), manual review request (MEDIUM/HIGH), premium negotiation |
+| **Admin portal** | Review queue, claim approvals, premium negotiations, dashboard financials |
+| **Claims** | Coverage limit enforcement, admin-set approved amounts, policy auto-expiry |
+| **Tracking** | `REQ-` tracking numbers for review requests, `NEG-` for negotiations |
+| **Persistence** | H2 in-memory (local dev) · PostgreSQL (production on Render) |
 
-## User Roles
+---
 
-### Customer
-1. Go to the landing page and choose a plan
-2. Fill in your fleet details (including phone number)
-3. Submit to get your risk assessment:
-   - **LOW risk** — click "Accept & Generate Policy" to issue your policy instantly
-   - **MEDIUM / HIGH risk** — application goes to the admin review queue
-4. On policy issuance you receive a **Customer ID** (e.g. `CUST-2026-0001`)
-5. Use your Customer ID or Policy Number at `/policy/lookup` to view your coverage
+## Customer Workflow
 
-### Admin
-- Login at `/admin/login` (default: `admin` / `admin123`)
-- **Review Queue** (`/admin/queue`) — pending MEDIUM/HIGH risk applications; approve or reject each
-- **All Submissions** (`/admin/all`) — full history with workflow status
+### 1. Get a Quote
+Visit the landing page, choose a plan (Basic / Premium / Diamond), and fill in your fleet profile.
 
-## Workflow
+### 2. Risk Assessment
+The engine scores your submission and assigns a risk category:
+
+| Score | Category | Next Step |
+|---|---|---|
+| ≤ 0.35 | **LOW** | Accept instantly → policy issued |
+| ≤ 0.65 | **MEDIUM** | Request manual review → tracking number assigned |
+| > 0.65 | **HIGH** | Request manual review → tracking number assigned |
+
+### 3. Policy Options (LOW risk)
+- **Accept & Generate Policy** — issues your policy immediately
+- **Request Lower Premium** — enters negotiation queue; you receive a `NEG-` tracking number
+
+### 4. After Policy Issuance
+- You receive a **Customer ID** (e.g. `CUST-2026-0001`) and **Policy Number** (e.g. `Pol-2026-1`)
+- Look up your policy at `/policy/lookup`
+- File claims at `/claim/new` — coverage tracked per policy, no further claims once the limit is exhausted
+
+### Track a Request
+Use your tracking number at `/underwriting/track` to check the status of a review or negotiation request.
+
+---
+
+## Full Workflow Diagram
 
 ```
 Customer submits quote
         │
-        ├── LOW risk  ──► PENDING_CUSTOMER_ACCEPTANCE
-        │                        │
-        │               Customer clicks Accept
-        │                        │
-        │                   POLICY_ISSUED ──► Customer ID assigned
+        ├── LOW risk ──► PENDING_CUSTOMER_ACCEPTANCE
+        │                   │                   │
+        │              Accept Policy      Request Lower Premium
+        │                   │                   │
+        │            POLICY_ISSUED       NEGOTIATION_REQUESTED  (NEG-xxxx assigned)
+        │                                       │
+        │                            Admin: Send Offer  OR  Accept & Issue
+        │                                 │                      │
+        │                      NEGOTIATION_OFFERED          POLICY_ISSUED
+        │                                 │
+        │                        Customer accepts
+        │                                 │
+        │                           POLICY_ISSUED
         │
-        └── MEDIUM / HIGH risk ──► PENDING_ADMIN_REVIEW
-                                          │
+        └── MEDIUM / HIGH risk ──► HIGH_RISK_REVIEW
+                                        │
+                                Customer clicks "Submit Review Request"
+                                        │
+                                PENDING_ADMIN_REVIEW  (REQ-xxxx assigned)
+                                        │
                               Admin approves / rejects
                                  │              │
                           POLICY_ISSUED      REJECTED
 ```
 
+---
+
+## Admin Portal
+
+Login at `/admin/login` — default credentials: `admin` / `admin123`
+
+| Page | URL | Description |
+|---|---|---|
+| Dashboard | `/admin/dashboard` | Total submissions, policies issued, revenue, claims paid |
+| Review Queue | `/admin/queue` | MEDIUM/HIGH risk applications awaiting decision |
+| Negotiations | `/admin/negotiations` | Customers requesting lower premiums |
+| All Submissions | `/admin/all` | Full history with workflow status |
+| Claims | `/admin/claims` | Pending claims — set approved amount per claim |
+
+### Claims Approval
+When approving a claim the admin sets the **approved amount** (independent of what the customer requested). Once cumulative approved claims for a policy reach its coverage limit, the policy is automatically expired.
+
+### Premium Negotiations
+Two options per negotiation request:
+- **Send Offer** — propose a revised premium; the customer must accept before the policy issues
+- **Accept & Issue** — set the premium and issue the policy immediately
+
+---
+
+## Coverage Limits
+
+| Plan | Coverage Limit |
+|---|---|
+| Basic | $10,000 |
+| Premium | $15,000 |
+| Diamond | $20,000 |
+
+Once total approved claims reach the coverage limit for a policy, the policy expires and no further claims can be filed.
+
+---
+
 ## Risk Scoring
 
-Each submission is scored across four dimensions:
+Scores are computed across four dimensions, summed, and passed through a sigmoid function to produce a value between 0 and 1.
 
-| Dimension | Factors |
+| Dimension | Key Factors |
 |---|---|
-| Business Stability | Company age, credit score, war zone operations |
+| Business Stability | Years in operation, credit score, war zone exposure |
 | Fleet Condition | Average vehicle age, primary vehicle type |
-| Driver Pool | Average driver age, pool size |
-| Claims History | Frequency, severity, at-fault rate |
+| Driver Pool | Average driver age, pool size relative to fleet |
+| Claims History | Claims frequency, total severity, at-fault rate |
 
-Dimension scores are summed and passed through a **sigmoid function** to produce a normalised score between 0 and 1:
+```
+sigmoid(x) = 1 / (1 + e^(-steepness × (x - midpoint)))
+```
 
-| Score | Category | Action | Premium Multiplier |
-|---|---|---|---|
-| ≤ 0.35 | LOW | APPROVE | 1.0× – 1.5× |
-| ≤ 0.65 | MEDIUM | REVIEW | 1.5× – 2.0× |
-| > 0.65 | HIGH | REJECT | 2.0× – 2.5× |
+Sigmoid parameters and thresholds are externalized in `application.properties`:
+
+```properties
+risk.sigmoid.steepness=6.0
+risk.sigmoid.midpoint=0.55
+risk.thresholds.low=0.35
+risk.thresholds.medium=0.65
+```
+
+---
 
 ## REST API
 
@@ -76,6 +150,7 @@ Dimension scores are summed and passed through a **sigmoid function** to produce
 {
   "businessInfo": {
     "companyName": "Acme Logistics",
+    "email": "ops@acme.com",
     "phoneNumber": "+441234567890",
     "yearsInOperation": 8,
     "creditScore": 720,
@@ -111,19 +186,7 @@ Dimension scores are summed and passed through a **sigmoid function** to produce
 }
 ```
 
-## Configuration
-
-All scoring weights and thresholds are externalized in `application.properties`.
-
-```properties
-# Sigmoid tuning
-risk.sigmoid.steepness=6.0
-risk.sigmoid.midpoint=0.55
-
-# Classification thresholds
-risk.thresholds.low=0.35
-risk.thresholds.medium=0.65
-```
+---
 
 ## Running Locally
 
@@ -131,11 +194,21 @@ risk.thresholds.medium=0.65
 mvn spring-boot:run
 ```
 
-Server starts on `http://localhost:8080`. Uses H2 in-memory database by default.
+Server starts on `http://localhost:8080`. Uses H2 in-memory database by default — no setup required.
 
-## Database (PostgreSQL on Render)
+### Running Tests
 
-Set the following environment variables on Render:
+```bash
+mvn test
+```
+
+123 tests across all controllers, services, and security configuration.
+
+---
+
+## Production (PostgreSQL on Render)
+
+Set the following environment variables:
 
 | Variable | Value |
 |---|---|
@@ -144,10 +217,11 @@ Set the following environment variables on Render:
 | `SPRING_DATASOURCE_PASSWORD` | your db password |
 | `SPRING_JPA_DATABASE_PLATFORM` | `org.hibernate.dialect.PostgreSQLDialect` |
 
-## Running Tests
+---
 
-```bash
-mvn test
-```
+## Tech Stack
 
-35 tests across `RiskScoringServiceTest`, `PolicyGenerationServiceTest`, and `QuotationServiceTest`.
+- **Backend** — Spring Boot 2.7, Spring Security, Spring Data JPA
+- **Frontend** — Thymeleaf, Bootstrap 5, Bootstrap Icons
+- **Database** — H2 (dev) / PostgreSQL (prod)
+- **Deployment** — Docker, Render

@@ -304,15 +304,16 @@ class UnderwritingFormControllerTest {
     // ── POST /underwriting/negotiate/{id} ────────────────────────────────────
 
     @Test
-    void negotiatePolicy_lowRisk_setsNegotiationRequestedStatus() throws Exception {
+    void negotiatePolicy_lowRisk_setsNegotiationRequestedStatusAndAssignsTrackingNumber() throws Exception {
         UnderwritingRecord record = savedRecord("NegotiateFleet", "PENDING_CUSTOMER_ACCEPTANCE");
 
         mvc.perform(post("/underwriting/negotiate/" + record.getId()).with(csrf()))
            .andExpect(status().is3xxRedirection())
            .andExpect(redirectedUrl("/underwriting/result/" + record.getId()));
 
-        assertThat(repo.findById(record.getId()).orElseThrow().getWorkflowStatus())
-                .isEqualTo("NEGOTIATION_REQUESTED");
+        UnderwritingRecord updated = repo.findById(record.getId()).orElseThrow();
+        assertThat(updated.getWorkflowStatus()).isEqualTo("NEGOTIATION_REQUESTED");
+        assertThat(updated.getTrackingNumber()).matches("NEG-\\d{4}-\\d+");
     }
 
     @Test

@@ -119,12 +119,13 @@ public class UnderwritingFormController {
         return "redirect:/underwriting/result/" + id;
     }
 
-    /** User requests a lower premium — enters negotiation queue. */
+    /** User requests a lower premium — assigns a negotiation tracking number and enters negotiation queue. */
     @PostMapping("/underwriting/negotiate/{id}")
     public String requestNegotiation(@PathVariable Long id) {
         UnderwritingRecord record = recordRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Record not found: " + id));
         if ("PENDING_CUSTOMER_ACCEPTANCE".equals(record.getWorkflowStatus())) {
+            record.setTrackingNumber(String.format("NEG-%d-%d", LocalDate.now().getYear(), record.getId()));
             record.setWorkflowStatus("NEGOTIATION_REQUESTED");
             recordRepository.save(record);
         }

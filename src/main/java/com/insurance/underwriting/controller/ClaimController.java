@@ -98,6 +98,19 @@ public class ClaimController {
             return "claim-form";
         }
 
+        // ── Coverage limit validation ─────────────────────────────────────────
+        BigDecimal totalApproved = claimRepository
+                .sumApprovedAmountByPolicyNumber(policy.getPolicyNumber())
+                .setScale(2, java.math.RoundingMode.HALF_UP);
+        BigDecimal limit = coverageLimit(policy.getSelectedTier());
+        if (totalApproved.compareTo(limit) >= 0) {
+            model.addAttribute("error",
+                    "The coverage limit of $" + limit.toPlainString() + " for your "
+                    + policy.getSelectedTier() + " policy has been fully utilised. "
+                    + "No further claims can be submitted.");
+            return "claim-form";
+        }
+
         PolicyClaim claim = PolicyClaim.builder()
                 .customerId(policy.getCustomerId())
                 .policyNumber(policy.getPolicyNumber())
@@ -114,5 +127,14 @@ public class ClaimController {
         claimRepository.save(claim);
         model.addAttribute("claim", claim);
         return "claim-submitted";
+    }
+
+    private static BigDecimal coverageLimit(String tier) {
+        if (tier == null) return new BigDecimal("10000");
+        switch (tier.toLowerCase()) {
+            case "premium": return new BigDecimal("15000");
+            case "diamond": return new BigDecimal("20000");
+            default:        return new BigDecimal("10000");
+        }
     }
 }

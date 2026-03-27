@@ -17,4 +17,7 @@ public interface UnderwritingRecordRepository extends JpaRepository<Underwriting
     BigDecimal sumAnnualPremiumForIssuedPolicies();
 
     java.util.Optional<UnderwritingRecord> findByPolicyNumber(String policyNumber);
+
+    @Query("SELECT r FROM UnderwritingRecord r WHERE r.workflowStatus IN ('PENDING_ADMIN_REVIEW', 'HIGH_RISK_REVIEW') ORDER BY r.submittedAt DESC")
+    List<UnderwritingRecord> findPendingReviewQueue();
 }

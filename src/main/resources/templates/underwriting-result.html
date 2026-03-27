@@ -155,13 +155,23 @@
     <div th:if="${record.workflowStatus == 'NEGOTIATION_REQUESTED'}" class="animate-in delay-2">
         <div class="alert alert-info d-flex gap-3 align-items-start mb-4" style="border-radius:12px;">
             <i class="bi bi-chat-left-dots-fill" style="font-size:1.6rem; margin-top:2px;"></i>
-            <div>
+            <div class="flex-grow-1">
                 <h5 class="fw-bold mb-1">Premium Negotiation Requested</h5>
                 <p class="mb-1">Your request for a lower premium has been submitted. Our underwriting team will review and propose a revised premium.</p>
-                <p class="mb-0 small text-muted">
+                <p class="mb-2 small text-muted">
                     We'll contact you at <strong th:text="${record.email}"></strong> once a decision is made.
                     You can also bookmark this page and return to check the status.
                 </p>
+                <div th:if="${record.trackingNumber != null}" class="tracking-box mt-2">
+                    <div class="text-muted small fw-bold mb-1">YOUR NEGOTIATION TRACKING NUMBER — use this to check your request status</div>
+                    <div class="tracking-number" th:text="${record.trackingNumber}"></div>
+                    <div class="mt-2">
+                        <a th:href="@{/underwriting/track(trackingNumber=${record.trackingNumber})}"
+                           class="btn btn-outline-warning btn-sm">
+                            <i class="bi bi-search me-1"></i>Track This Request
+                        </a>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

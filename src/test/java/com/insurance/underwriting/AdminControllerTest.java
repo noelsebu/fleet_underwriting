@@ -260,6 +260,26 @@ class AdminControllerTest {
 
     @Test
     @WithMockUser(username = "admin", authorities = "ROLE_ADMIN")
+    void acceptNegotiation_issuesPolicyDirectly() throws Exception {
+        UnderwritingRecord record = recordRepo.save(pendingRecord("DirectIssueCo", "NEGOTIATION_REQUESTED"));
+
+        mvc.perform(post("/admin/accept-negotiation/" + record.getId()).with(csrf())
+           .param("negotiatedPremium", "3000.00"))
+           .andExpect(status().is3xxRedirection())
+           .andExpect(redirectedUrl("/admin/negotiations"));
+
+        UnderwritingRecord updated = recordRepo.findById(record.getId()).orElseThrow();
+        assertThat(updated.getWorkflowStatus()).isEqualTo("POLICY_ISSUED");
+        assertThat(updated.getNegotiatedPremium()).isEqualByComparingTo("3000.00");
+        assertThat(updated.getAnnualPremium()).isEqualByComparingTo("3000.00");
+        assertThat(updated.getPolicyNumber()).startsWith("Pol-");
+        assertThat(updated.getCustomerId()).startsWith("CUST-");
+        assertThat(updated.getIssuedAt()).isNotNull();
+        assertThat(updated.getExpiresAt()).isAfter(updated.getIssuedAt());
+    }
+
+    @Test
+    @WithMockUser(username = "admin", authorities = "ROLE_ADMIN")
     void setPremium_setsNegotiatedPremiumAndStatus() throws Exception {
         UnderwritingRecord record = recordRepo.save(pendingRecord("NegoCo", "NEGOTIATION_REQUESTED"));
 

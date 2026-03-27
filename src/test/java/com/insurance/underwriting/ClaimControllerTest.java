@@ -295,6 +295,54 @@ class ClaimControllerTest {
            .andExpect(view().name("claim-submitted"));
     }
 
+    // ── Coverage limit validation ─────────────────────────────────────────────
+
+    @Test
+    void submitClaim_coverageExhausted_returnsFormWithError() throws Exception {
+        UnderwritingRecord policy = recordRepo.save(UnderwritingRecord.builder()
+                .companyName("ExhaustedFleet")
+                .phoneNumber("5550000000")
+                .selectedTier("Basic")
+                .submittedAt(LocalDateTime.now())
+                .riskScore(0.20)
+                .riskCategory("LOW")
+                .recommendedAction("APPROVE")
+                .premiumMultiplier(new java.math.BigDecimal("1.10"))
+                .annualPremium(new java.math.BigDecimal("4500"))
+                .workflowStatus("POLICY_ISSUED")
+                .customerId("CUST-2026-7777")
+                .policyNumber("Pol-2026-7777")
+                .issuedAt(LocalDateTime.now())
+                .expiresAt(LocalDateTime.now().plusYears(1))
+                .build());
+
+        // Simulate coverage already exhausted: $10,000 approved on Basic policy
+        claimRepo.save(PolicyClaim.builder()
+                .customerId(policy.getCustomerId())
+                .policyNumber(policy.getPolicyNumber())
+                .companyName("ExhaustedFleet")
+                .selectedTier("Basic")
+                .incidentDescription("Major collision.")
+                .claimAmount(new java.math.BigDecimal("10000"))
+                .incidentDate(LocalDate.now().minusDays(5))
+                .atFault(false)
+                .status("APPROVED")
+                .approvedAmount(new java.math.BigDecimal("10000"))
+                .submittedAt(LocalDateTime.now().minusDays(5))
+                .build());
+
+        mvc.perform(post("/claim/submit").with(csrf())
+           .contentType(org.springframework.http.MediaType.APPLICATION_FORM_URLENCODED)
+           .param("reference", "Pol-2026-7777")
+           .param("incidentDescription", "New incident.")
+           .param("claimAmount", "500")
+           .param("incidentDate", LocalDate.now().toString())
+           .param("atFault", "false"))
+           .andExpect(status().isOk())
+           .andExpect(view().name("claim-form"))
+           .andExpect(model().attributeExists("error"));
+    }
+
     // ── helper ────────────────────────────────────────────────────────────────
 
     private UnderwritingRecord issuedPolicy(String customerId, String policyNumber) {

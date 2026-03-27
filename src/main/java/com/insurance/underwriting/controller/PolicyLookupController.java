@@ -52,6 +52,7 @@ public class PolicyLookupController {
         BigDecimal coverageLimit = coverageLimit(rec.getSelectedTier());
         BigDecimal approvedTotal = rec.getPolicyNumber() != null
                 ? claimRepository.sumApprovedAmountByPolicyNumber(rec.getPolicyNumber())
+                        .setScale(2, java.math.RoundingMode.HALF_UP)
                 : BigDecimal.ZERO;
         int usagePct = approvedTotal.compareTo(coverageLimit) >= 0 ? 100
                 : approvedTotal.multiply(BigDecimal.valueOf(100))

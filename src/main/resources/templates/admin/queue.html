@@ -17,6 +17,8 @@
         .main { margin-left: 220px; padding: 32px; }
         .badge-MEDIUM { background: #fff3cd; color: #664d03; }
         .badge-HIGH   { background: #f8d7da; color: #842029; }
+        .status-awaiting { background: #e2e3e5; color: #495057; font-size: .75rem; padding: 3px 9px; border-radius: 20px; font-weight: 600; }
+        .status-submitted { background: #fff3cd; color: #664d03; font-size: .75rem; padding: 3px 9px; border-radius: 20px; font-weight: 600; }
         .card { border: none; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,.06); }
         .tracking-badge { font-family: monospace; font-size: .8rem; background: #fff8e1;
                           color: #856404; border: 1px solid #ffe082; border-radius: 6px; padding: 2px 8px; }
@@ -58,6 +60,7 @@
                         <th>Risk</th>
                         <th>Premium</th>
                         <th>Tracking #</th>
+                        <th>Request Status</th>
                         <th>Submitted</th>
                         <th>Actions</th>
                     </tr>
@@ -81,6 +84,14 @@
                             <span th:if="${r.trackingNumber != null}" class="tracking-badge"
                                   th:text="${r.trackingNumber}"></span>
                             <span th:unless="${r.trackingNumber != null}" class="text-muted small">—</span>
+                        </td>
+                        <td>
+                            <span th:if="${r.workflowStatus == 'PENDING_ADMIN_REVIEW'}" class="status-submitted">
+                                <i class="bi bi-send-fill me-1"></i>Review Requested
+                            </span>
+                            <span th:if="${r.workflowStatus == 'HIGH_RISK_REVIEW'}" class="status-awaiting">
+                                <i class="bi bi-hourglass me-1"></i>Awaiting Customer
+                            </span>
                         </td>
                         <td th:text="${#temporals.format(r.submittedAt, 'dd MMM yyyy HH:mm')}"></td>
                         <td>

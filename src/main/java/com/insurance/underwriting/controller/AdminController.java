@@ -68,8 +68,7 @@ public class AdminController {
 
     @GetMapping("/queue")
     public String queue(Model model) {
-        model.addAttribute("records",
-                recordRepository.findByWorkflowStatusOrderBySubmittedAtDesc("PENDING_ADMIN_REVIEW"));
+        model.addAttribute("records", recordRepository.findPendingReviewQueue());
         return "admin/queue";
     }
 
@@ -78,6 +77,24 @@ public class AdminController {
         model.addAttribute("negotiations",
                 recordRepository.findByWorkflowStatusOrderBySubmittedAtDesc("NEGOTIATION_REQUESTED"));
         return "admin/negotiations";
+    }
+
+    /** Admin accepts negotiation and directly issues the policy without waiting for customer. */
+    @PostMapping("/accept-negotiation/{id}")
+    public String acceptNegotiation(@PathVariable Long id,
+                                    @RequestParam BigDecimal negotiatedPremium) {
+        UnderwritingRecord record = recordRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Record not found: " + id));
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        record.setNegotiatedPremium(negotiatedPremium);
+        record.setAnnualPremium(negotiatedPremium);
+        record.setWorkflowStatus("POLICY_ISSUED");
+        record.setCustomerId(String.format("CUST-%d-%04d", java.time.LocalDate.now().getYear(), record.getId()));
+        record.setPolicyNumber(String.format("Pol-%d-%d", java.time.LocalDate.now().getYear(), record.getId()));
+        record.setIssuedAt(now);
+        record.setExpiresAt(now.plusYears(1));
+        recordRepository.save(record);
+        return "redirect:/admin/negotiations";
     }
 
     /** Admin sets a negotiated premium for a customer's request. */
@@ -149,7 +166,8 @@ public class AdminController {
 
         // Check if cumulative approved claims exceed the coverage limit for this policy
         recordRepository.findByPolicyNumber(claim.getPolicyNumber()).ifPresent(policy -> {
-            BigDecimal totalApproved = claimRepository.sumApprovedAmountByPolicyNumber(claim.getPolicyNumber());
+            BigDecimal totalApproved = claimRepository.sumApprovedAmountByPolicyNumber(claim.getPolicyNumber())
+                    .setScale(2, java.math.RoundingMode.HALF_UP);
             BigDecimal limit = coverageLimit(policy.getSelectedTier());
             if (totalApproved.compareTo(limit) >= 0) {
                 policy.setExpiresAt(java.time.LocalDateTime.now());
