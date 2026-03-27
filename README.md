@@ -3,7 +3,7 @@
 A Spring Boot + Thymeleaf web application that automates commercial fleet insurance underwriting. Customers get instant risk assessments and quotes; the admin portal handles manual reviews, claim approvals, and premium negotiations.
 
 **Live demo:** [https://fleet-quote.onrender.com](https://fleet-quote.onrender.com)
-**Admin portal:** [https://fleet-quote.onrender.com/admin/claims](https://fleet-quote.onrender.com/admin/claims)
+**Admin portal:** [https://fleet-quote.onrender.com/admin](https://fleet-quote.onrender.com/admin) — credentials: `admin` / `admin123`
 
 ---
 
